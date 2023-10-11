@@ -1,0 +1,16 @@
+{
+	"name": "ministryofjustice/hale-components",
+	"description": "Functions that are commonly used across the Hale Platform",
+	"keywords": [
+		"wordpress"
+	],
+	"type": "wordpress-plugin",
+	"require": {
+		"composer/installers": "~1.0 || ^2.0"
+	},
+	"config": {
+		"allow-plugins": {
+			"composer/installers": true
+		}
+	}
+}
