@@ -23,7 +23,8 @@ function hale_login_styles() {
                 text-indent: 0;
                 font-size: 28px;
                 font-weight: 600;
-                width:100%;
+                height: auto;
+                width: auto;
             }
         </style>
     <?php 
