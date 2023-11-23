@@ -52,7 +52,7 @@ function hale_import_users_page() {
                     continue;
                 }
 
-                if(!array_key_exists('email', $user) || empty($user['email'])){
+                if(!array_key_exists('email', $user) || empty($user['email']) || !is_email($user['email'])){
                     $failed_users++;
                     continue;
                 }
