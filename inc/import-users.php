@@ -32,7 +32,6 @@ function hale_import_users_page() {
     if (isset($_POST['submit'])) {
         // Retrieve form data
         $json_data = stripslashes($_POST['json_data']);
-        $selected_site = sanitize_text_field($_POST['site']);
 
         // Validate JSON data
         if (empty($json_data)) {
@@ -87,7 +86,7 @@ function hale_import_users_page() {
                 } 
 
                 // Add the user to the specified site in the Multisite network
-                $result = add_user_to_blog($selected_site, $user_id, 'subscriber');
+                $result = add_user_to_blog(get_current_blog_id(), $user_id, 'subscriber');
 
                 // Check for errors
                 if (is_wp_error($result)) {
