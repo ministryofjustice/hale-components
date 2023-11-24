@@ -5,53 +5,30 @@ function hale_custom_login_message() {
     $message = get_option('login_message');
 
     if(!empty($message)){
-        echo '<div class="custom-login-message">'.wpautop($message).'</div>';
+        ?>
+        <div class="govuk-notification-banner" role="region" aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
+            <div class="govuk-notification-banner__header">
+                <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
+                Important
+                </h2>
+            </div>
+            <div class="govuk-notification-banner__content">
+               
+                    <?php echo wpautop($message); ?>
+            
+            </div>
+        </div>
+<?php
     }
 }
 add_action('login_message', 'hale_custom_login_message');
 
-function hale_login_styles() { 
-    
-    $title = get_option('login_title');
-    $message = get_option('login_message');
+function hale_login_head() {
 
-        //Login Title Styles
-        ?>
-        <style type="text/css">
-            #login h1 a, .login h1 a {
-                background-image: none;
-                text-indent: 0;
-                font-size: 28px;
-                font-weight: 600;
-                height: auto;
-                width: auto;
-            }
-        </style>
-    <?php 
-
-
-    if(!empty($message)){ 
-         //Login Message Styles
-        ?>
-        <style type="text/css">
-            #login .custom-login-message {
-                padding: 10px;
-                margin-bottom: 20px;
-                border: 1px solid #ccc;
-                background-color: #f9f9f9;
-            }
-            #login .custom-login-message p {
-                margin-bottom: 10px;
-            }
-
-            #login .custom-login-message p:last-child {
-                margin-bottom: 0px;
-            }
-        </style>
-    <?php
-    }
+    wp_register_style('custom_loginstyle', plugins_url('../dist/css/login.css', __FILE__));
+    wp_enqueue_style("custom_loginstyle");
 }
-add_action( 'login_enqueue_scripts', 'hale_login_styles' );
+add_action('login_head', 'hale_login_head'); 
 
 function hale_custom_login_title() {
 
@@ -72,13 +49,12 @@ function hale_login_header_link($login_header_url)
 add_filter('login_headerurl', 'hale_login_header_link');
 
 function hale_add_login_settings_page() {
-    add_menu_page(
+    add_options_page(
         'Login Settings',
-        'Login Settings',
+        'Login',
         'manage_options',
         'login-settings',
-        'hale_login_settings_page',
-        'dashicons-admin-generic'
+        'hale_login_settings_page'
     );
 }
 

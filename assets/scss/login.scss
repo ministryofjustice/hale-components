@@ -1,0 +1,55 @@
+
+@import "node_modules/govuk-frontend/govuk/base";
+@import 'node_modules/govuk-frontend/govuk/components/notification-banner/notification-banner';
+@import 'node_modules/govuk-frontend/govuk/components/label/label';
+@import 'node_modules/govuk-frontend/govuk/components/input/input';
+@import 'node_modules/govuk-frontend/govuk/components/button/button';
+
+
+#login h1 a, .login h1 a {
+    background-image: none;
+    text-indent: 0;
+    font-size: 28px;
+    font-weight: 600;
+    width:auto;
+    height:auto;
+}
+
+#login .govuk-notification-banner__content p {
+    margin-bottom: 10px;
+}
+
+#login .govuk-notification-banner__content p:last-child {
+    margin-bottom: 0px;
+}
+
+#login {
+
+    form {
+        label {
+            @extend .govuk-label;
+
+        }
+
+        input[type="text"], input[type="password"]{
+            @extend .govuk-input;
+        }
+
+        input[type="submit"]{
+            @extend .govuk-button;
+            width:100%;
+            margin-bottom: 0;
+        }
+
+        .forgetmenot {
+
+            float: none;
+            margin-bottom: 10px;;
+            label {
+                display: inline-block;
+            }
+        }
+
+
+    }
+}
