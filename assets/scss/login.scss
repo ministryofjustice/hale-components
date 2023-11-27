@@ -1,12 +1,14 @@
 
 @import "node_modules/govuk-frontend/govuk/base";
+@import "node_modules/govuk-frontend/govuk/core/typography";
 @import 'node_modules/govuk-frontend/govuk/components/notification-banner/notification-banner';
 @import 'node_modules/govuk-frontend/govuk/components/label/label';
 @import 'node_modules/govuk-frontend/govuk/components/input/input';
 @import 'node_modules/govuk-frontend/govuk/components/button/button';
 
 
-#login h1 a, .login h1 a {
+#login h1 a,
+.login h1 a {
     background-image: none;
     text-indent: 0;
     font-size: 28px;
@@ -15,15 +17,20 @@
     height:auto;
 }
 
-#login .govuk-notification-banner__content p {
-    margin-bottom: 10px;
-}
-
-#login .govuk-notification-banner__content p:last-child {
-    margin-bottom: 0px;
-}
-
 #login {
+    .govuk-notification-banner__content {
+        p {
+            margin-bottom: 10px;
+
+            &:last-child {
+                margin-bottom: 0px;
+            }
+        }
+    }
+
+    #login_error {
+        @extend .govuk-body;
+    }
 
     form {
         label {
@@ -41,6 +48,12 @@
             margin-bottom: 0;
         }
 
+        .button:not(.wp-hide-pw){
+            @extend .govuk-button;
+            width:100%;
+            margin-bottom: 10px;
+        }
+
         .forgetmenot {
 
             float: none;
@@ -50,6 +63,17 @@
             }
         }
 
+        &.admin-email-confirm-form {
 
+            input[type="submit"],
+            .button:not(.wp-hide-pw)
+            {
+
+                @include govuk-media-query($from: tablet) {
+                    width:49%;
+                }
+            }
+
+        }
     }
 }
