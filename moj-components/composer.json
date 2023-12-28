@@ -1,0 +1,50 @@
+{
+  "name": "ministryofjustice/wp-moj-components",
+  "description": "A plugin to introduce global functions to a collection of WP sites",
+  "type": "wordpress-muplugin",
+  "license": "MIT",
+  "require": {
+    "composer/installers": "^1.0"
+  },
+  "require-dev": {
+    "10up/wp_mock": "0.4.2",
+    "phpmd/phpmd": "^2.7",
+    "composer/composer": "*",
+    "squizlabs/php_codesniffer": "*"
+  },
+  "scripts": {
+    "phpcs-config-set": "phpcs --config-set ignore_warnings_on_exit 1",
+    "phpcs": "phpcs --extensions=php --ignore=*/vendor/* --standard=PSR12 .",
+    "phpcbf": "phpcbf --extensions=php --ignore=*/vendor/* --standard=PSR12 .",
+    "test": [
+      "vendor/bin/phpunit",
+      "vendor/bin/phpcs -p",
+      "vendor/bin/phpmd component/ text cleancode,codesize,controversial,design,naming,unusedcode"
+    ],
+    "coverage": "vendor/bin/phpunit --coverage-html coverage --whitelist component"
+  },
+  "autoload": {
+    "psr-4": {
+      "MOJComponents\\": "component/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Damien Wilson",
+      "email": "wordpress@digital.justice.gov.uk"
+    },
+    {
+      "name": "Robert Lowe",
+      "email": "wordpress@digital.justice.gov.uk"
+    },
+    {
+      "name": "Adam Brown",
+      "email": "wordpress@digital.justice.gov.uk"
+    }
+  ],
+  "config": {
+    "allow-plugins": {
+      "composer/installers": true
+    }
+  }
+}
