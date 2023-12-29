@@ -28,20 +28,6 @@
       "MOJComponents\\": "component/"
     }
   },
-  "authors": [
-    {
-      "name": "Damien Wilson",
-      "email": "wordpress@digital.justice.gov.uk"
-    },
-    {
-      "name": "Robert Lowe",
-      "email": "wordpress@digital.justice.gov.uk"
-    },
-    {
-      "name": "Adam Brown",
-      "email": "wordpress@digital.justice.gov.uk"
-    }
-  ],
   "config": {
     "allow-plugins": {
       "composer/installers": true
