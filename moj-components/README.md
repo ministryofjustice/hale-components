@@ -13,32 +13,16 @@ Components within this plugin attempt to create a baseline standard that all MoJ
 ### Current components
 
 1. **Introduce**: *creates a Dashboard widget containing contact information so stakeholders can get support*  
-
-2. **Introduce _(popup)_**: *provides a popup banner to relay administrative information to stakeholders* 
-
-3. **Multisite**: *adds support for multisite based environments* 
-
-4. **Multisite _(domain tracker)_**: *a non destructive custom domain tracker, provided primarily for the WASM tool.* 
-
-5. **Security**: *applies scanning functionality and various security patches*
  
-6. **Security _(rest-api)_**: *prevents access to specified REST API routes*
+2. **Security _(rest-api)_**: *prevents access to specified REST API routes*
 
-7. **Sitemap**: *provides auto-generated sitemap functionality and shortcodes*
+3. **Sitemap**: *provides auto-generated sitemap functionality and shortcodes*
 
-8. **Users**: *introduces user-switch capability for admins plus monitors inactive users for GDPR*
+4. **Users**: *introduces user-switch capability for admins plus monitors inactive users for GDPR*
 
-9. **Versions**: *grants access to WordPress version over API and provides information relating to installed plugin and theme versions*
+5. **Users**: *Adds SiteManager User Role*
 
 ------
-
-### How to install
-
-Require the plugin in your composer.json file and always use the latest version:
-
-`"ministryofjustice/wp-moj-components": "*"`
-
-*Load the plugin in the mu-plugins directory when you run `composer update `.*
 
 ### How it works
 Inside the directory named 'component' are sub-directories that represent individual functionality. These are called '**components**'.
