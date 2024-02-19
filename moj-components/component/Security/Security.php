@@ -12,9 +12,6 @@ class Security
         $this->helper = $mojHelper;
 
         $this->hooks();
-
-        // init REST API filter
-        new FilterRestAPI();
     }
 
     public function hooks()
