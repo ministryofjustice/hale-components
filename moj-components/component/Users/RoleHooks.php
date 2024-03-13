@@ -132,7 +132,7 @@ class RoleHooks
         ];
 
         if (in_array($new_status, $is_forbidden)) {
-            if (Utils::isWebAdministratorOnHomepage()) {
+            if (RoleUtils::isWebAdministratorOnHomepage()) {
                 wp_update_post([
                     'ID' => $post->ID,
                     'post_status' => 'publish'
