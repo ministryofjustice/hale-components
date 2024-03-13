@@ -34,6 +34,7 @@ class Users
         $this->userSwitch();
 
         SiteManager::createRole();
+        RoleHooks::apply();
     }
 
     public static function userSwitch()

@@ -95,74 +95,13 @@ class RoleHooks
         }
     }
 
-    public static function updateRoleMaybe()
-    {
-        $options = get_option('moj_user_roles_data', []);
-
-        // create a preliminary record
-        $data = [
-            'datetime' => time(),
-            'version' => MOJ_USER_ROLES_VERSION
-        ];
-
-        if (!empty($options)) {
-            $last_entry = end($options);
-
-            Utils::debug('last_entry_' . __LINE__, $last_entry);
-
-            // make sure we have an entry to work with...
-            if (!isset($last_entry['version'])) {
-                return false;
-            }
-
-            Utils::debug('last_entry_exists_' . __LINE__, true);
-
-            // only update if we have a difference
-            if ($last_entry['version'] !== MOJ_USER_ROLES_VERSION) {
-                Utils::debug(
-                    'difference_found_' . __LINE__,
-                    [
-                        'last_version' => $last_entry['version'],
-                        'now_version' => MOJ_USER_ROLES_VERSION
-                    ]
-                );
-                if (Utils::removeRole('site-manager') === true) {
-                    array_push($options, $data);
-
-                    if (update_option('moj_user_roles_data', $options)) {
-                        Utils::debug('History Updated ' . __LINE__, 'true');
-                    }
-
-                    // recreate the role
-                    SiteManager::createRole();
-                } else {
-                    Utils::debug(
-                        'role_not_removed_' . __LINE__,
-                        [
-                            'last_version' => $last_entry['version'],
-                            'now_version' => MOJ_USER_ROLES_VERSION
-                        ]
-                    );
-                }
-            }
-
-        } else {
-            // should occur once, or if the option 'moj_user_roles_data' is empty
-            array_push($options, $data);
-            update_option('moj_user_roles_data', $options);
-            return true;
-        }
-
-        return null;
-    }
-
     /**
      * Show a notification to the user if an unqualified attempt has been made to remove the homepage
      * from public view.
      */
     public static function mojCannotModifyHomepageStatus()
     {
-        if (Utils::isWebAdministratorOnHomepage() && get_option('MOJ_POST_STATUS_UPDATE_STOPPED', null)) {
+        if (RoleUtils::isWebAdministratorOnHomepage() && get_option('MOJ_POST_STATUS_UPDATE_STOPPED', null)) {
             echo '<div class="notice notice-error is-dismissible">
                 <p><strong>There was an attempt to remove the homepage from public view. This action has undesirable results and has been stopped to protect the website.</strong></p>
             </div>';
@@ -256,7 +195,6 @@ class RoleHooks
         add_filter('editable_roles', __CLASS__ . '::filterEditableRoles', 10, 1);
         add_filter('map_meta_cap', __CLASS__ . '::filterPreventModificationOfAdminUser', 10, 4);
         add_action('admin_menu', __CLASS__ . '::actionRestrictAppearanceThemesMenu', 999);
-        add_action('admin_init', __CLASS__ . '::updateRoleMaybe', 10);
 
         // stop Editors
         add_action('transition_post_status', __CLASS__ . '::onHomepageStatusChange', 10, 3);
