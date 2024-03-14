@@ -10,7 +10,7 @@
  * 
  * This tool is displayed on the admin page /wp-admin/network/site-info.php
  *
- * @since 4.3.0
+ * @since 1.2.0
  */
 function hale_search_and_replace_database_tool() {
     // We need to close off info-php page form we are hooking into
