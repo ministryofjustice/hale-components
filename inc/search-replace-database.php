@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Displays a form to run a search and replace operation
  *
@@ -28,7 +27,8 @@ function hale_search_and_replace_database_tool() {
 
     <form method="post" action="site-info.php?action=run-search-and-replace&id=<?php echo $blogid; ?>">
         <hr><h3>Search and Replace</h3>
-        <p>Run a search and replace against keywords in the database, limited to this site.</p>
+        <p>Run a search and replace against keywords in the database, limited to this site. <br> 
+        For domain replacements, include the https:// </p>
 
         <table>
             <tr>
@@ -49,9 +49,8 @@ function hale_search_and_replace_database_tool() {
                         </tr>
                         <tr class="form-field">
                             <th scope="row"><label for="checkbox_field"><?php _e('Dry run'); ?></label></th>
-                            <td><input name="dryrun_value" type="checkbox" id="dryrun_value"
-                                       <?php echo checked($checkbox_field, 1); ?>>
-                                <label for="checkbox_field"></label>
+                            <td><input name="dryrun_value" type="checkbox" id="dryrun_value">
+                                <label for="checkbox_field">Check to test search and replace without actually applying.</label>
                             </td>
                         </tr>
                     </table>
@@ -99,8 +98,10 @@ function hale_search_and_replace_database_tool() {
     $command .= "--recurse-objects ";
     $command .= $dry_run;
 
-    // Execute the WP-CLI command and capture its output
-    $wp_cli_output = shell_exec($command);
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Execute the WP-CLI command and capture its output
+        $wp_cli_output = shell_exec($command);
+    }
 
     // Display WP-CLI command and its output
     if ($search_for !== "" || $replace_with !== "" || $dry_run !== "") {
@@ -109,10 +110,15 @@ function hale_search_and_replace_database_tool() {
     }
 }
 
+// Requires WP to load plugins before we can access check on users
+function hale_search_replace_plugin_hook() {
 
-// Only load tool if user is super admin
-if ( is_super_admin() ) {
+    // // Make sure to only load tool if user is super admin
+    if ( current_user_can( 'setup_network' ) ) {
 
-    // Hook into the network site info form
-    add_action('network_site_info_form', 'hale_search_and_replace_database_tool', 10, 0);
-}
+        // Hook into the network site info form
+        add_action('network_site_info_form', 'hale_search_and_replace_database_tool', 10, 0);
+    }
+  }
+
+ add_action( 'plugins_loaded', 'hale_search_replace_plugin_hook' );
