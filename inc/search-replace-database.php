@@ -109,5 +109,10 @@ function hale_search_and_replace_database_tool() {
     }
 }
 
-// Hook into the network site info form
-add_action('network_site_info_form', 'hale_search_and_replace_database_tool', 10, 0);
+
+// Only load tool if user is super admin
+if ( is_super_admin() ) {
+
+    // Hook into the network site info form
+    add_action('network_site_info_form', 'hale_search_and_replace_database_tool', 10, 0);
+}
