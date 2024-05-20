@@ -2,6 +2,9 @@
 
 namespace MOJComponents\AdminSettings;
 
+use MOJComponents\TaxonomyUpdater\TaxonomyUpdater;
+use MOJComponents\ImportUsers\ImportUsers;
+
 class AdminSettings
 {
     public $helper;
@@ -32,13 +35,38 @@ class AdminSettings
 
     public function page()
     {
-        add_options_page(
-            'Hale Components',
+
+        $taxonomyUpdaterObject = new TaxonomyUpdater();
+        $importUsersObject = new ImportUsers();
+
+        add_menu_page(
+            'General settings',
             'Hale Components',
             'manage_options',
             'mojComponentSettings',
-            [$this, 'content']
+            [$this, 'content'],
+            '',
+            99
         );
+        
+        add_submenu_page(
+            'mojComponentSettings',
+            'My Custom Page',
+            'Taxonomy Updater',
+            'manage_options',
+            'taxonomy-updater',
+            [$taxonomyUpdaterObject, 'hale_taxonomy_updater_tool']
+        );
+
+        add_submenu_page(
+            'mojComponentSettings',
+            'My Custom Page',
+            'Import Users',
+            'manage_options',
+            'import-users',
+            [$importUsersObject, 'hale_import_users_tool']
+        );
+        
     }
 
     public function mojColourSchemes()
