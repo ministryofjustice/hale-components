@@ -51,7 +51,7 @@ class AdminSettings
         
         add_submenu_page(
             'mojComponentSettings',
-            'My Custom Page',
+            'Taxonomy Updater',
             'Taxonomy Updater',
             'manage_options',
             'taxonomy-updater',
@@ -60,7 +60,7 @@ class AdminSettings
 
         add_submenu_page(
             'mojComponentSettings',
-            'My Custom Page',
+            'Import Users',
             'Import Users',
             'manage_options',
             'import-users',
@@ -124,6 +124,7 @@ class AdminSettings
             foreach ($this->tabs as $tab) {
                 echo '<a href="#component-tab-' . $tab['key'] . '" class="nav-tab">' . $tab['class'] . '</a>';
             }
+
             echo '</h2>';
 
             settings_fields('mojComponentSettings');
