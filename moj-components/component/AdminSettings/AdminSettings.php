@@ -113,32 +113,33 @@ class AdminSettings
     }
 
     public function content()
-    {
-        ?>
-        <form action='options.php' method='post'>
+{
+    ?>
+    <form action='options.php' method='post'>
 
-            <h1>Hale Components</h1>
+        <h1>Hale Components</h1>
 
-            <?php
-            echo '<h2 class="nav-tab-wrapper">';
-            foreach ($this->tabs as $tab) {
-                echo '<a href="#component-tab-' . $tab['key'] . '" class="nav-tab">' . $tab['class'] . '</a>';
-            }
-
-            echo '</h2>';
-
-            settings_fields('mojComponentSettings');
-            $this->doSettingsSections('mojComponentSettings');
-
-            echo '<hr>';
-
-            submit_button();
-            ?>
-
-
-        </form>
         <?php
-    }
+        echo '<h2 class="nav-tab-wrapper">';
+        foreach ($this->tabs as $tab) {
+            // Ensure href attribute is always valid
+            echo '<a href="#component-tab-' . esc_attr($tab['key']) . '" class="nav-tab">' . esc_html($tab['class']) . '</a>';
+        }
+
+        echo '</h2>';
+
+        settings_fields('mojComponentSettings');
+        $this->doSettingsSections('mojComponentSettings');
+
+        echo '<hr>';
+
+        submit_button();
+        ?>
+
+    </form>
+    <?php
+}
+
 
     /**
      * @SuppressWarnings(PHPMD.CamelCaseVariableName)
