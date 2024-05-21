@@ -14,6 +14,8 @@ use MOJComponents\Sitemap\Sitemap;
 use MOJComponents\Head\Head;
 use MOJComponents\Introduce\Introduce;
 use MOJComponents\Analytics\Analytics;
+use MOJComponents\TaxonomyUpdater\TaxonomyUpdater;
+use MOJComponents\ImportUsers\ImportUsers;
 
 define('MOJ_COMPONENT_PLUGIN_PATH', __FILE__);
 
@@ -22,7 +24,7 @@ $mojHelper = new Helper();
 
 new AdminSettings();
 
-/*********
+/*****************
  * Load Components
  ******************/
 
@@ -32,3 +34,5 @@ new Sitemap();
 new Head();
 new Introduce();
 new Analytics();
+new TaxonomyUpdater();
+new ImportUsers();

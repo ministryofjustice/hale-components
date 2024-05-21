@@ -2,15 +2,14 @@ jQuery(function ($) {
 
     /**
      * This function is a setter and getter. On set it updates the browser history and returns the pathname + search
-     * part of the URL. If no key is provided the funstion returns false. If a key with no value has been given, and
+     * part of the URL. If no key is provided the function returns false. If a key with no value has been given, and
      * the query string parameter exists, the value is returned.
      *
      * @param key
      * @param value
      * @returns string|boolean false|pathname + query string
      */
-    function mojQString(key, value)
-    {
+    function mojQString(key, value) {
         var params = new URLSearchParams(window.location.search);
 
         if (!value && params.has(key)) {
@@ -31,14 +30,13 @@ jQuery(function ($) {
         return (window.location.pathname + window.location.search);
     }
 
-    function setTab(tab)
-    {
+    function setTab(tab) {
         var tabId, refererPath;
 
         if (!tab) {
             tab = $('.nav-tab-wrapper a').eq(0);
         } else {
-            tab = $(".nav-tab-wrapper a[href='" + tab +"']");
+            tab = $(".nav-tab-wrapper a[href='" + tab + "']");
         }
 
         if (!tab.attr('href')) {
@@ -60,8 +58,16 @@ jQuery(function ($) {
         return false;
     }
 
-    // only run JS on our settings page
-    if ($('.settings_page_mojComponentSettings').length > 0) {
+    // Check if any class starting with hale-components_page_ is present on the body element
+    function hasHaleComponentsClass() {
+        return Array.from(document.body.classList).some(function (cls) {
+            return cls.startsWith('hale-components_page_');
+        });
+    }
+
+    // only run JS on our main settings page and not on the submenus
+    if ($('.toplevel_page_mojComponentSettings').length > 0 && !hasHaleComponentsClass()) {
+
         $('.nav-tab-wrapper').on('click', 'a', function (e) {
             e.preventDefault();
 
