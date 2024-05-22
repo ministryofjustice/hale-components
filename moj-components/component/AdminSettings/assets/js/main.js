@@ -20,11 +20,21 @@ jQuery(function ($) {
             return false;
         }
 
-        params.set(key, value);
+        if (value) {
+            params.set(key, value);
+        } else {
+            params.delete(key);
+        }
+
         if (!window.history) {
             /* shhh */
         } else {
-            window.history.replaceState({}, '', `${location.pathname}?${params}`);
+            let newUrl = `${location.pathname}?${params}`;
+            // Remove the trailing '?' if no params are left
+            if (newUrl.endsWith('?')) {
+                newUrl = newUrl.slice(0, -1);
+            }
+            window.history.replaceState({}, '', newUrl);
         }
 
         return (window.location.pathname + window.location.search);
@@ -43,7 +53,17 @@ jQuery(function ($) {
             tab = $('.nav-tab-wrapper a').eq(0);
         }
 
-        tabId = tab.attr('href').split('#')[1];
+        var href = tab.attr('href');
+
+        if (!href || href.indexOf('#') === -1) {
+            return false;
+        }
+
+        tabId = href.split('#')[1];
+
+        if (!tabId) {
+            return false; // If tabId is undefined, exit the function
+        }
 
         tab.parent().find('a').removeClass('nav-tab-active');
         tab.addClass('nav-tab-active');
@@ -66,22 +86,27 @@ jQuery(function ($) {
     }
 
     // only run JS on our main settings page and not on the submenus
-    if ($('.toplevel_page_mojComponentSettings').length > 0 && !hasHaleComponentsClass()) {
+    if (!hasHaleComponentsClass()) {
 
-        $('.nav-tab-wrapper').on('click', 'a', function (e) {
-            e.preventDefault();
+        // only run JS on our main settings page and not on the submenus
+        if ($('.toplevel_page_mojComponentSettings').length > 0) {
 
-            setTab($(this).attr('href'));
-            return false;
-        });
 
-        // set the tab
-        var mojTabSelected = mojQString('moj-tab');
+            $('.nav-tab-wrapper').on('click', 'a', function (e) {
+                e.preventDefault();
 
-        if (mojTabSelected) {
-            setTab('#' + mojTabSelected);
-        } else {
-            setTab();
+                setTab($(this).attr('href'));
+                return false;
+            });
+
+            // set the tab
+            var mojTabSelected = mojQString('moj-tab');
+
+            if (mojTabSelected) {
+                setTab('#' + mojTabSelected);
+            } else {
+                setTab();
+            }
         }
     }
 });
