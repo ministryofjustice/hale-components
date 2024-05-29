@@ -12,7 +12,7 @@ class AcfFieldUpdater
      * Depending on the selection, appropriate input fields are displayed. After submitting the form, the specified
      * updates are performed on the database.
      */
-    public function haleAcfFieldUpdaterTool()
+    public function hale_acf_field_updater_tool()
     {
         if (!current_user_can('manage_options')) {
             wp_die(__('You do not have sufficient permissions to access this page.'));
