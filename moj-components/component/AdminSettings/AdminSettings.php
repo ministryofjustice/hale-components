@@ -4,6 +4,7 @@ namespace MOJComponents\AdminSettings;
 
 use MOJComponents\TaxonomyUpdater\TaxonomyUpdater;
 use MOJComponents\ImportUsers\ImportUsers;
+use MOJComponents\AcfFieldUpdater\AcfFieldUpdater;
 
 class AdminSettings
 {
@@ -38,6 +39,7 @@ class AdminSettings
 
         $taxonomyUpdaterObject = new TaxonomyUpdater();
         $importUsersObject = new ImportUsers();
+        $acfFieldUpdaterObject = new AcfFieldUpdater();
 
         add_menu_page(
             'General settings',
@@ -56,6 +58,15 @@ class AdminSettings
             'manage_options',
             'taxonomy-updater',
             [$taxonomyUpdaterObject, 'hale_taxonomy_updater_tool']
+        );
+
+        add_submenu_page(
+            'mojComponentSettings',
+            'ACF Field Updater',
+            'ACF Field Updater',
+            'manage_options',
+            'acf-field-updater',
+            [$acfFieldUpdaterObject, 'hale_acf_field_updater_tool']
         );
 
         add_submenu_page(

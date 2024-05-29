@@ -15,6 +15,7 @@ use MOJComponents\Head\Head;
 use MOJComponents\Introduce\Introduce;
 use MOJComponents\Analytics\Analytics;
 use MOJComponents\TaxonomyUpdater\TaxonomyUpdater;
+use MOJComponents\AcfFieldUpdater\AcfFieldUpdater;
 use MOJComponents\ImportUsers\ImportUsers;
 
 define('MOJ_COMPONENT_PLUGIN_PATH', __FILE__);
@@ -36,3 +37,4 @@ new Introduce();
 new Analytics();
 new TaxonomyUpdater();
 new ImportUsers();
+new AcfFieldUpdater();
