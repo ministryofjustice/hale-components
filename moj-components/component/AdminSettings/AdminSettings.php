@@ -30,8 +30,12 @@ class AdminSettings
 
     public function enqueue()
     {
-        wp_enqueue_style('settings_admin_css', $this->helper->cssPath(__FILE__) . 'main.css', []);
-        wp_enqueue_script('settings_admin_js', $this->helper->jsPath(__FILE__) . 'main.js', ['jquery']);
+        $currentScreen = get_current_screen();
+
+        if($currentScreen->base == "toplevel_page_mojComponentSettings"){
+            wp_enqueue_style('settings_admin_css', $this->helper->cssPath(__FILE__) . 'main.css', []);
+            wp_enqueue_script('settings_admin_js', $this->helper->jsPath(__FILE__) . 'main.js', ['jquery']);
+        }
     }
 
     public function page()
