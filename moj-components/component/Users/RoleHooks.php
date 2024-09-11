@@ -168,7 +168,7 @@ class RoleHooks
         global $post;
 
         if (gettype($post) !== 'object') {
-            return false;
+            return $classes;
         }
 
         if ($post->ID === (int)get_option('page_on_front')) {
