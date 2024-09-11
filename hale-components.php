@@ -4,7 +4,7 @@
 Plugin Name: Hale Components
 Description: Functions that are commonly used across the Hale Platform
 Author: Ministry of Justice
-Version: 1.3.1
+Version: 1.3.2
 */
 
 include 'inc/search-replace-database.php'; 
