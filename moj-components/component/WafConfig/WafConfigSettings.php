@@ -24,7 +24,7 @@ class WafConfigSettings extends WafConfig
     {
         add_settings_field(
             'WafConfig_element',
-            __('Enable WAF bypass:', 'wp-moj-components'),
+            __('Enable platform wide WAF bypass', 'wp-moj-components'),
             [$this, 'addWafConfigElement'],
             'mojComponentSettings',
             $section
@@ -45,7 +45,7 @@ class WafConfigSettings extends WafConfig
             <span class="moj-component-slider"></span>
         </label>
         <p class="description">
-            <?php _e('Enable this setting to bypass WAF for logged-in users. A cookie will be set to indicate the bypass.', 'wp-moj-components'); ?>
+            <?php _e('', 'wp-moj-components'); ?>
         </p>
         <style>
             .moj-component-toggle {
@@ -120,7 +120,7 @@ class WafConfigSettings extends WafConfig
         ?>
         <div class="welcome-panel-column">
             <h4><?php _e('Context', 'wp-moj-components') ?></h4>
-            <p><?php _e('Use this toggle to enable WAF bypass for logged-in users. This is particularly useful for debugging or testing purposes where the WAF might interfere with site functionality.', 'wp-moj-components'); ?></p>
+            <p><?php _e('Use this toggle to enable WAF bypass for logged-in users (excluding subscribers). This sets a cookie, WAF_CONFIG and secret value, that allows logged-in users to bypass WAF checks.', 'wp-moj-components'); ?></p>
         </div>
         <?php
     }
