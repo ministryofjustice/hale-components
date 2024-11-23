@@ -108,8 +108,8 @@ class WafConfigSettings extends WafConfig
                 setcookie('WAF_CONFIG', '1', time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN);
             } else {
                 // Remove the cookie if the toggle is off.
-                if (isset($_COOKIE['waf_bypass'])) {
-                    setcookie('waf_bypass', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN);
+                if (isset($_COOKIE['WAF_CONFIG'])) {
+                    setcookie('WAF_CONFIG', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN);
                 }
             }
         }
