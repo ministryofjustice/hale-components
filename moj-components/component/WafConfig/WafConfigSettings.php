@@ -99,13 +99,17 @@ class WafConfigSettings extends WafConfig
 
     /**
      * Set a WAF bypass cookie for logged-in users if the setting is enabled.
+     * // Excludes subscribers (they will still get WAF)
      */
     public function setWafBypassCookie()
     {
-        if (is_user_logged_in()) {
+        $wbConfig = $this->get_env_variable('WB_CONFIG');
+
+        // edit_posts includes Contributor, Author, Editor
+        if (current_user_can('edit_posts')) {
             $options = get_option('moj_component_settings', []);
             if (!empty($options['WafConfig_element'])) {
-                setcookie('WB_CONFIG', '1', time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN);
+                setcookie('WB_CONFIG', $wbConfig, time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN);
             } else {
                 // Remove the cookie if the toggle is off.
                 if (isset($_COOKIE['WB_CONFIG'])) {
@@ -117,12 +121,32 @@ class WafConfigSettings extends WafConfig
 
     public function settingsSectionCB()
     {
+
+        $weclome_panel_text = 'Enable WAF bypass so any logged-in users
+            are not subject to WAF rules. This does not apply to subscribers, they
+            are still subject to WAF rules.';
+
         ?>
         <div class="welcome-panel-column">
             <h4><?php _e('Context', 'wp-moj-components') ?></h4>
-            <p><?php _e('Use this toggle to enable WAF bypass for logged-in users (excluding subscribers). This sets a cookie, WB_CONFIG and secret value, that allows logged-in users to bypass WAF checks.', 'wp-moj-components'); ?></p>
+            <p><?php _e($weclome_panel_text, 'wp-moj-components'); ?></p>
         </div>
         <?php
+    }
+
+    /**
+     * Function to retrieve the value of an environment variable.
+     * 
+     * @param string $key The name of the environment variable.
+     * @param mixed $default A default value if the environment variable is not set.
+     * 
+     * @return string The value of the environment variable or the default value.
+     */
+    function get_env_variable($key, $default = null) {
+        // Check if the environment variable is set in $_ENV or $_SERVER
+        $value = getenv($key) ?: ($_ENV[$key] ?? $_SERVER[$key] ?? $default);
+
+        return $value;
     }
 }
 
