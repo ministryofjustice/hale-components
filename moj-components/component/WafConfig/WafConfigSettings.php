@@ -105,11 +105,11 @@ class WafConfigSettings extends WafConfig
         if (is_user_logged_in()) {
             $options = get_option('moj_component_settings', []);
             if (!empty($options['WafConfig_element'])) {
-                setcookie('WAF_CONFIG', '1', time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN);
+                setcookie('WB_CONFIG', '1', time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN);
             } else {
                 // Remove the cookie if the toggle is off.
-                if (isset($_COOKIE['WAF_CONFIG'])) {
-                    setcookie('WAF_CONFIG', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN);
+                if (isset($_COOKIE['WB_CONFIG'])) {
+                    setcookie('WB_CONFIG', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN);
                 }
             }
         }
@@ -120,7 +120,7 @@ class WafConfigSettings extends WafConfig
         ?>
         <div class="welcome-panel-column">
             <h4><?php _e('Context', 'wp-moj-components') ?></h4>
-            <p><?php _e('Use this toggle to enable WAF bypass for logged-in users (excluding subscribers). This sets a cookie, WAF_CONFIG and secret value, that allows logged-in users to bypass WAF checks.', 'wp-moj-components'); ?></p>
+            <p><?php _e('Use this toggle to enable WAF bypass for logged-in users (excluding subscribers). This sets a cookie, WB_CONFIG and secret value, that allows logged-in users to bypass WAF checks.', 'wp-moj-components'); ?></p>
         </div>
         <?php
     }
