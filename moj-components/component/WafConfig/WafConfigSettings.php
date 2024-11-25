@@ -24,7 +24,7 @@ class WafConfigSettings extends WafConfig
     {
         add_settings_field(
             'WafConfig_element',
-            __('Enable platform wide WAF bypass', 'wp-moj-components'),
+            __('Enable WAF bypass', 'wp-moj-components'),
             [$this, 'addWafConfigElement'],
             'mojComponentSettings',
             $section
@@ -44,9 +44,6 @@ class WafConfigSettings extends WafConfig
             <input type="checkbox" name="moj_component_settings[WafConfig_element]" value="1" <?php echo $WafConfigElement; ?>>
             <span class="moj-component-slider"></span>
         </label>
-        <p class="description">
-            <?php _e('', 'wp-moj-components'); ?>
-        </p>
         <style>
             .moj-component-toggle {
                 position: relative;
@@ -103,13 +100,15 @@ class WafConfigSettings extends WafConfig
      */
     public function setWafBypassCookie()
     {
-        $wbConfig = $this->get_env_variable('WB_CONFIG');
+        // Value provided into the container via GitAction secrets
+        $wb_config_env_value = $this->get_env_variable('WB_CONFIG');
 
-        // edit_posts includes Contributor, Author, Editor
+        // Setting to edit posts excludes subscribers
         if (current_user_can('edit_posts')) {
             $options = get_option('moj_component_settings', []);
+
             if (!empty($options['WafConfig_element'])) {
-                setcookie('WB_CONFIG', $wbConfig, time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN);
+                setcookie('WB_CONFIG', $wb_config_env_value, time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN);
             } else {
                 // Remove the cookie if the toggle is off.
                 if (isset($_COOKIE['WB_CONFIG'])) {
@@ -121,15 +120,20 @@ class WafConfigSettings extends WafConfig
 
     public function settingsSectionCB()
     {
+        $welcome_panel_text = 'To avoid WAF rules disrupting editors working in the backend,<br>
+        this toggle turns WAF rules off on all logged-in users across the platform.<br>
+        Subscribers, however, are an exception and are still subject to WAF rules.';
 
-        $weclome_panel_text = 'Enable WAF bypass so any logged-in users
-            are not subject to WAF rules. This does not apply to subscribers, they
-            are still subject to WAF rules.';
-
+        $body_panel_text = 'Activating generates a cookie for logged-in users called WB_CONFIG <br>
+        with a value provided by GitActions that is used by the WAF as a flag to skip.';
         ?>
+    
         <div class="welcome-panel-column">
             <h4><?php _e('Context', 'wp-moj-components') ?></h4>
-            <p><?php _e($weclome_panel_text, 'wp-moj-components'); ?></p>
+            <p><?php _e($welcome_panel_text, 'wp-moj-components'); ?>
+            <br><br>
+            <?php _e($body_panel_text, 'wp-moj-components'); ?>
+            </p>
         </div>
         <?php
     }
