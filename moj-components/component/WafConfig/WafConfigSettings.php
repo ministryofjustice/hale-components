@@ -37,13 +37,29 @@ class WafConfigSettings extends WafConfig
     public function addWafConfigElement()
     {
         $options = get_option('moj_component_settings');
-        $WafConfigElement = !empty($options['WafConfig_element']) ? 'checked' : '';
+        $waf_config_element = !empty($options['WafConfig_element']) ? 'checked' : '';
+
+        $wb_config_env_value = $this->get_env_variable('WB_CONFIG');
+        $cannot_find_waf_value = false;
+
+        // If no value present turn off toggle and alert user
+        if ($wb_config_env_value == '') {
+            $waf_config_element = '';
+            $cannot_find_waf_value = true;
+        }
 
         ?>
         <label class="moj-component-toggle">
-            <input type="checkbox" name="moj_component_settings[WafConfig_element]" value="1" <?php echo $WafConfigElement; ?>>
+            <input type="checkbox" name="moj_component_settings[WafConfig_element]" value="1" <?php echo $waf_config_element; ?>>
             <span class="moj-component-slider"></span>
         </label>
+        
+        <?php
+            if ($cannot_find_waf_value === true) {
+                _e('WAF $_ENV value not found. Cannot enable.', 'wp-moj-components');
+            }
+        ?>
+
         <style>
             .moj-component-toggle {
                 position: relative;
@@ -146,7 +162,7 @@ class WafConfigSettings extends WafConfig
      * 
      * @return string The value of the environment variable or the default value.
      */
-    function get_env_variable($key, $default = null) {
+    function get_env_variable($key, $default = '') {
         // Check if the environment variable is set in $_ENV or $_SERVER
         $value = getenv($key) ?: ($_ENV[$key] ?? $_SERVER[$key] ?? $default);
 
