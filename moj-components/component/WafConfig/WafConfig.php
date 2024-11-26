@@ -41,15 +41,4 @@ class WafConfig
         add_action('wp_loaded', [$this->settings, 'settings'], 1);
         add_action('wp_head', [$this,'loadWafConfigElement']);
     }
-
-    /**
-     * Print into WafConfig inputed element/code
-     *
-     */
-    public function loadWafConfigElement()
-    {
-        if (!empty($this->WafConfigElement)) {
-            echo $this->WafConfigElement;
-        }
-    }
 }
