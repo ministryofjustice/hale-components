@@ -156,6 +156,7 @@ class WafConfigSettings extends WafConfig
 
     /**
      * Function to retrieve the value of an environment variable.
+     * Checks both ENV and SERVER
      * 
      * @param string $key The name of the environment variable.
      * @param mixed $default A default value if the environment variable is not set.
