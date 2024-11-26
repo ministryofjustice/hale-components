@@ -64,7 +64,7 @@ function hale_components_network_dashboard_content() {
         /* Grid container */
         .hale-dashboard-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr; /* Two equal columns */
+            grid-template-columns: 2fr 1fr;
             gap: 20px;
             margin-top: 20px;
         }
