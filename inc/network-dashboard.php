@@ -33,11 +33,11 @@ function hale_components_network_dashboard_content() {
 
     // Define text for the WAF bypass information
     $waf_description_panel_text = 'To avoid WAF rules disrupting editors working in the backend,<br>
-    all logged-in users are assigned the WB_CONFIG cookie. The presence of the WB_CONFIG cookie and value<br>
-    disables WAF running. Subscribers, however, are an exception and are still subject to WAF rules.';
+    all logged-in users are assigned the WB_CONFIG cookie. The presence of the WB_CONFIG cookie and value
+    disables WAF running.<br>Subscribers, however, are an exception and are still subject to WAF rules.';
 
-    $waf_body_panel_text = 'The WB_CONFIG cookie is set with a value<br>
-    provided by GitActions. Our ingress configuation uses NGINX to apply a WAF but
+    $waf_body_panel_text = 'The WB_CONFIG cookie is set with a value
+    provided by GitActions.<br> Our ingress configuation uses NGINX to apply a WAF but
     skips WAF rules if the cookie and the correct value are present.';
     ?>
     <div class="wrap">
@@ -64,7 +64,7 @@ function hale_components_network_dashboard_content() {
         /* Grid container */
         .hale-dashboard-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr;
+            grid-template-columns: 3fr 1fr;
             gap: 20px;
             margin-top: 20px;
         }
@@ -86,7 +86,7 @@ function hale_components_network_dashboard_content() {
         }
 
         .hale-dashboard-right {
-            flex: 1;
+            flex: 2;
             padding-left: 20px;
         }
 
