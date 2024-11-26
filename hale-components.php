@@ -9,5 +9,6 @@ Version: 1.4.0
 
 include 'inc/search-replace-database.php'; 
 include 'inc/site-path-track.php'; 
-include 'inc/login-settings.php'; 
+include 'inc/login-settings.php';
+include 'inc/network-dashboard.php'; 
 include 'moj-components/moj-components.php'; 

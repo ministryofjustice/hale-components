@@ -17,7 +17,6 @@ use MOJComponents\Analytics\Analytics;
 use MOJComponents\TaxonomyUpdater\TaxonomyUpdater;
 use MOJComponents\AcfFieldUpdater\AcfFieldUpdater;
 use MOJComponents\ImportUsers\ImportUsers;
-use MOJComponents\WafConfig\WafConfig;
 
 define('MOJ_COMPONENT_PLUGIN_PATH', __FILE__);
 
@@ -39,4 +38,3 @@ new Analytics();
 new TaxonomyUpdater();
 new ImportUsers();
 new AcfFieldUpdater();
-new WafConfig();
