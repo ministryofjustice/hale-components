@@ -21,3 +21,5 @@ Download to the /plugins folder of WordPress.
 
 * Taxonomy Updater - A tool that makes a db update changing one taxonomy name for another.
 * Import Users - A tool that adds users into the WP site user table
+* ACF Meta Field Updater - Run a database update on the current site in the _postmeta table.
+* Network Dashboard available for controlling features across the whole platform.

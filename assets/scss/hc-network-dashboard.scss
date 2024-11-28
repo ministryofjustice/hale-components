@@ -1,0 +1,57 @@
+      /* Grid container */
+      .hc-dashboard-grid {
+          display: grid;
+          grid-template-columns: 3fr 1fr;
+          gap: 20px;
+          margin-top: 20px;
+      }
+
+      /* Grid item */
+      .hc-dashboard-item {
+          display: flex;
+          flex-wrap: wrap;
+          background: #f9f9f9;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          padding: 20px;
+      }
+
+      .hc-dashboard-left {
+          flex: 1;
+          padding-right: 20px;
+          border-right: 1px solid #ddd;
+      }
+
+      .hc-dashboard-right {
+          flex: 2;
+          padding-left: 20px;
+      }
+
+      .hc-dashboard-left h4,
+      .hc-dashboard-right h4 {
+          margin-top: 0;
+      }
+
+      /* Green box for "On:" */
+      .hc-status-on {
+          display: inline-block;
+          background-color: #28a745;
+          /* Green background */
+          color: #fff;
+          /* White text */
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-weight: bold;
+      }
+
+      /* Optional: Style for "Off:" */
+      .hc-status-off {
+          display: inline-block;
+          background-color: #dc3545;
+          /* Red background */
+          color: #fff;
+          /* White text */
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-weight: bold;
+      }
