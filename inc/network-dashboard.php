@@ -3,32 +3,52 @@
  * Hale Components Network Dashboard
  */
 
-add_action( 'network_admin_menu', 'hale_components_multisite_dashboard_page' );
+ add_action('admin_enqueue_scripts', 'hc_network_dashboard_enqueue'); 
+
+function hc_network_dashboard_enqueue() {
+    // Path to the CSS file
+    $css_file = '../dist/css/hc-network-dashboard.css';
+
+    // Get the file modification time for cache busting
+    $file_version = filemtime( plugin_dir_path( __FILE__ ) . $css_file );
+
+    // Register and enqueue the style with the cache-busted version
+    wp_register_style(
+        'network_dashboard',
+        plugins_url( $css_file, __FILE__ ) . '?v=' . $file_version, // Append version for cache busting
+        array(), // Dependencies (empty array means no dependencies)
+        null, // No need for a version since we're using filemtime for cache busting
+        'all' // Media (all for all devices)
+    );
+    wp_enqueue_style( 'network_dashboard' );
+}
+
+add_action( 'network_admin_menu', 'hc_network_dashboard_page' );
 
 /**
  * Add the dashboard page under Settings in the network admin menu.
  */
-function hale_components_multisite_dashboard_page() {
+function hc_network_dashboard_page() {
     add_submenu_page(
         'settings.php',
         'Hale Components Network Dashboard',
         'Hale Components',  // Menu title
         'manage_network_options',
         'hale-components-network-dashboard',  // Slug for the page
-        'hale_components_network_dashboard_content'  // Callback
+        'hc_network_dashboard_content'  // Callback
     );
 }
 
 /**
  * Callback function to display the content of the custom dashboard page.
  */
-function hale_components_network_dashboard_content() {
+function hc_network_dashboard_content() {
     // Check if the WB_CONFIG cookie is present
     $cookie_present = hc_is_waf_bypass_cookie_present();
 
     $cookie_message = $cookie_present 
-    ? __('<span class="status-on">ON</span> WB_CONFIG cookie is present.', 'hale-components') 
-    : __('<span class="status-off">OFF</span> WB_CONFIG cookie is not present.', 'hale-components');
+    ? __('<span class="hc-status-on">ON</span> WB_CONFIG cookie is present.', 'hale-components') 
+    : __('<span class="hc-status-off">OFF</span> WB_CONFIG cookie is not present.', 'hale-components');
 
 
     // Define text for the WAF bypass information
@@ -45,14 +65,14 @@ function hale_components_network_dashboard_content() {
         <p><?php _e( 'Hale Components Platform wide network settings page.', 'hale-components' ); ?></p>
         
         <!-- Grid layout -->
-        <div class="hale-dashboard-grid">
+        <div class="hc-dashboard-grid">
             <!-- First row: WAF bypass information -->
-            <div class="hale-dashboard-item">
-                <div class="hale-dashboard-left">
+            <div class="hc-dashboard-item">
+                <div class="hc-dashboard-left">
                     <h4><?php _e( 'WAF Bypass Status', 'hale-components' ); ?></h4>
                     <p><?php echo $cookie_message; ?></p>
                 </div>
-                <div class="hale-dashboard-right">
+                <div class="hc-dashboard-right">
                     <h4><?php _e( 'What is the WB_CONFIG cookie?', 'hale-components' ); ?></h4>
                     <p><?php echo $waf_description_panel_text; ?></p>
                     <p><?php echo $waf_body_panel_text; ?></p>
@@ -60,61 +80,6 @@ function hale_components_network_dashboard_content() {
             </div>
         </div>
     </div>
-    <style>
-        /* Grid container */
-        .hale-dashboard-grid {
-            display: grid;
-            grid-template-columns: 3fr 1fr;
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        /* Grid item */
-        .hale-dashboard-item {
-            display: flex;
-            flex-wrap: wrap;
-            background: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 20px;
-        }
-
-        .hale-dashboard-left {
-            flex: 1;
-            padding-right: 20px;
-            border-right: 1px solid #ddd;
-        }
-
-        .hale-dashboard-right {
-            flex: 2;
-            padding-left: 20px;
-        }
-
-        .hale-dashboard-left h4,
-        .hale-dashboard-right h4 {
-            margin-top: 0;
-        }
-
-        /* Green box for "On:" */
-        .status-on {
-            display: inline-block;
-            background-color: #28a745; /* Green background */
-            color: #fff; /* White text */
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-
-        /* Optional: Style for "Off:" */
-        .status-off {
-            display: inline-block;
-            background-color: #dc3545; /* Red background */
-            color: #fff; /* White text */
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-    </style>
     <?php
 }
 
