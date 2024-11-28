@@ -6,21 +6,27 @@
  add_action('admin_enqueue_scripts', 'hc_network_dashboard_enqueue'); 
 
 function hc_network_dashboard_enqueue() {
-    // Path to the CSS file
-    $css_file = '../dist/css/hc-network-dashboard.css';
+    // Get the current screen object
+    $screen = get_current_screen();
 
-    // Get the file modification time for cache busting
-    $file_version = filemtime( plugin_dir_path( __FILE__ ) . $css_file );
+    // Check we are on the specific admin page
+    if ( isset( $_GET['page'] ) && $_GET['page'] === 'hale-components-network-dashboard' ) {
+        // Path to the CSS file
+        $css_file = '../dist/css/hc-network-dashboard.css';
 
-    // Register and enqueue the style with the cache-busted version
-    wp_register_style(
-        'network_dashboard',
-        plugins_url( $css_file, __FILE__ ) . '?v=' . $file_version, // Append version for cache busting
-        array(), // Dependencies (empty array means no dependencies)
-        null, // No need for a version since we're using filemtime for cache busting
-        'all' // Media (all for all devices)
-    );
-    wp_enqueue_style( 'network_dashboard' );
+        // Get the file modification time for cache busting
+        $file_version = filemtime( plugin_dir_path( __FILE__ ) . $css_file );
+
+        // Register and enqueue the style with the cache-busted version
+        wp_register_style(
+            'network_dashboard',
+            plugins_url( $css_file, __FILE__ ) . '?v=' . $file_version, // Append version for cache busting
+            array(), // Dependencies (empty array means no dependencies)
+            null, // No need for a version since we're using filemtime for cache busting
+            'all' // Media (all for all devices)
+        );
+        wp_enqueue_style( 'network_dashboard' );
+    }
 }
 
 add_action( 'network_admin_menu', 'hc_network_dashboard_page' );
