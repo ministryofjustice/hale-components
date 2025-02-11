@@ -71,7 +71,7 @@ class RoleHooks
      * Allows all editors to write unfiltered HTML, meaning iFrames and Script tags will no longer be stripped out
      */
     public static function allowUnfilteredHTMLforAllEditors($caps, $cap, $user_id) {
-        if ( 'unfiltered_html' === $cap && user_can( $user_id, 'editor' ) ) {
+        if ( 'unfiltered_html' === $cap && (user_can($user_id,'site-manager') || user_can($user_id,'editor'))) {
             return [ 'unfiltered_html' ];
         }
 
