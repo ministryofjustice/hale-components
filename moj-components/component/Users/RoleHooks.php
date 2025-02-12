@@ -69,9 +69,11 @@ class RoleHooks
      * Filter allowUnfilteredHTMLforAllEditors
      * Map meta capabilities to capabilities
      * Allows all editors to write unfiltered HTML, meaning iFrames and Script tags will no longer be stripped out
+     * Note: Authors and Contributors (who have edit_posts capability) won't have unfiltered_html so they will still strip these out
+     * At time of writing, we don't have any Authors or Contributors.
      */
     public static function allowUnfilteredHTMLforAllEditors($caps, $cap, $user_id) {
-        if ( 'unfiltered_html' === $cap && (user_can($user_id,'edit_posts'))) {
+        if ( 'unfiltered_html' === $cap && (user_can($user_id,'edit_pages'))) {
             return [ 'unfiltered_html' ];
         }
         return $caps;
