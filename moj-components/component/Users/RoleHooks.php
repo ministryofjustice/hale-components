@@ -66,6 +66,20 @@ class RoleHooks
     }
 
     /**
+     * Filter allowUnfilteredHTMLforAllEditors
+     * Map meta capabilities to capabilities
+     * Allows all editors to write unfiltered HTML, meaning iFrames and Script tags will no longer be stripped out
+     * Note: Authors and Contributors (who have edit_posts capability) won't have unfiltered_html so they will still strip these out
+     * At time of writing, we don't have any Authors or Contributors.
+     */
+    public static function allowUnfilteredHTMLforAllEditors($caps, $cap, $user_id) {
+        if ( 'unfiltered_html' === $cap && (user_can($user_id,'edit_pages'))) {
+            return [ 'unfiltered_html' ];
+        }
+        return $caps;
+    }
+
+    /**
      * Determine if the current user is allowed to edit/delete/manage the specified user.
      * Non-administrators cannot edit administrators.
      *
@@ -194,6 +208,7 @@ class RoleHooks
     {
         add_filter('editable_roles', __CLASS__ . '::filterEditableRoles', 10, 1);
         add_filter('map_meta_cap', __CLASS__ . '::filterPreventModificationOfAdminUser', 10, 4);
+        add_filter('map_meta_cap', __CLASS__ . '::allowUnfilteredHTMLforAllEditors', 10, 3);
         add_action('admin_menu', __CLASS__ . '::actionRestrictAppearanceThemesMenu', 999);
 
         // stop Editors

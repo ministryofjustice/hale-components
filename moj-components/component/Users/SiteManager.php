@@ -40,6 +40,7 @@ class SiteManager
             'delete_users',
             'remove_users',
             'edit_theme_options',
+            'unfiltered_html'
         ];
         foreach ($additionalCapabilities as $cap) {
             $site_manager->add_cap($cap);
