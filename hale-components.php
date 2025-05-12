@@ -21,6 +21,8 @@ include 'inc/login-settings.php';
 // Only include the network dashboard if this is a multisite setup
 if (is_multisite()) {
     include 'inc/network-dashboard.php'; 
+	include 'inc/register-rest-api-routes.php';
 }
 
 include 'moj-components/moj-components.php'; 
+
