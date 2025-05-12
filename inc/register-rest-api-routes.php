@@ -59,12 +59,17 @@ function hale_components_get_api_sites_callback() {
     // Loop through each site and gather relevant details.
     foreach ($sites as $site) {
         $details = get_blog_details($site->blog_id);
-        $url = $details->siteurl;
+		$url = $details->siteurl;
+
+		// Parse the domain from the full URL
+    	$parsed_url = parse_url($url);
+		$domain = $parsed_url['host'] ?? $details->domain;
 
         $data[] = [
             'blog_id' => $site->blog_id,
             'slug'    => $details->path,
-            'url'     => $url,
+			'url'     => $url,
+			'domain'  => $domain,
             'name'    => $details->blogname, // May default to root name if not switched.
         ];
     }
@@ -128,10 +133,15 @@ function hale_components_get_api_domain_callback() {
             continue;
         }
 
+		// Parse the domain from the full URL
+    	$parsed_url = parse_url($url);
+		$domain = $parsed_url['host'] ?? $details->domain;
+
         $data[] = [
             'blog_id' => $site->blog_id,
             'slug'    => $details->path,
             'url'     => $url,
+			'domain'  => $domain,
             'name'    => $details->blogname,
         ];
     }
