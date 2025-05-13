@@ -23,7 +23,8 @@ $custom_routes = array_filter(array_keys($routes), function ($route) {
 
 $api_endpoint_text = 'This plugin registers a custom rest API "/hc-rest" with Wordpress.<br>
 					 These endpoints support various tools used to support the platform.<br>
-					 As a general rule, extend rather then replace these APIs.';
+As a general rule, extend rather then replace these APIs.<br><br>
+An example of one of the routes, https://websitebuilder.service.justice.gov.uk/wp-json/hc-rest/v1/sites/domain';
 ?>
 
 <!-- Custom API endpoints section -->
