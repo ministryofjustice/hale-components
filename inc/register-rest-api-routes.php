@@ -136,10 +136,19 @@ function hale_components_get_api_domain_callback() {
 		// Parse the domain from the full URL
     	$parsed_url = parse_url($url);
 		$domain = $parsed_url['host'] ?? $details->domain;
+        
+        switch_to_blog( $site->blog_id );
+        $slug = get_option( 'site_path_slug' );
+        restore_current_blog();
+
+        if ( empty( $slug ) ) {
+            $slug = 'site-' . $site->blog_id;
+        }
 
         $data[] = [
-            'blog_id' => $site->blog_id,
-            'slug'    => $details->path,
+            'blogID'  => $site->blog_id,
+            'path'    => $details->path,
+            'slug'    => $slug,
             'url'     => $url,
 			'domain'  => $domain,
             'name'    => $details->blogname,
