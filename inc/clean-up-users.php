@@ -21,6 +21,7 @@ function render_cleanup_page() {
     echo '<p>This will delete all users who are not assigned to any site and are not super admins.</p>';
     echo '<p>If confirm is unchecked it will do a dry run (no users deleted)</p>';
     echo '<form method="post">';
+    wp_nonce_field('cleanup_unassigned_users_action', 'cleanup_unassigned_users_nonce');
     // Super admin reassignment dropdown
     echo '<label for="reassign_user_id"><strong>Reassign content to:</strong></label><br><br>';
     echo '<select name="reassign_user_id" id="reassign_user_id">';
@@ -40,6 +41,11 @@ function render_cleanup_page() {
     echo '</form>';
 
     if ( isset($_POST['delete_unassigned_users']) ) {
+
+        if ( ! isset($_POST['cleanup_unassigned_users_nonce']) || ! wp_verify_nonce($_POST['cleanup_unassigned_users_nonce'], 'cleanup_unassigned_users_action') ) {
+            wp_die('Security check failed.');
+        }
+        
         $unassigned_users = hale_get_unassigned_users();
 
         if ( empty($unassigned_users) ) {
