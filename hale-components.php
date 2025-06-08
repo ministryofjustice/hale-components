@@ -23,7 +23,7 @@ if (is_multisite()) {
     include 'inc/network-dashboard.php'; 
 	include 'inc/register-rest-api-routes.php';
     include 'inc/clean-up-users.php'; 
+    include 'inc/site-setup.php'; 
 }
 
 include 'moj-components/moj-components.php'; 
-
