@@ -133,7 +133,7 @@ function hale_components_get_api_domain_callback()
         // Filter out unwanted domains. Filter out exact matches to these domains.
         // Will include subdomains but not directories.
         if (
-            strpos($url, '://hale.docker') !== false ||
+            strpos($url, 'hale.docker') !== false ||
             strpos($url, '://websitebuilder.service.justice.gov.uk') !== false
         ) {
             continue;
