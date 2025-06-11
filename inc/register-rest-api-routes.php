@@ -1,6 +1,7 @@
 <?php
+
 // Exit if accessed directly.
-if ( ! defined( 'ABSPATH' ) ) {
+if (! defined('ABSPATH')) {
     exit;
 }
 
@@ -11,7 +12,8 @@ add_action('rest_api_init', 'hale_components_register_rest_api_endpoints');
  * Registers custom public REST API routes for the hale-components plugin.
  * Only for WP multisite configurations
  */
-function hale_components_register_rest_api_endpoints() {
+function hale_components_register_rest_api_endpoints()
+{
     // Route to get all sites in the multisite network.
     register_rest_route('hc-rest/v1', '/sites', [
         'methods' => 'GET',
@@ -52,24 +54,25 @@ function hale_components_register_rest_api_endpoints() {
  * Callback for /sites endpoint.
  * Returns a list of all sites in the multisite network.
  */
-function hale_components_get_api_sites_callback() {
+function hale_components_get_api_sites_callback()
+{
     $sites = get_sites();
     $data = [];
 
     // Loop through each site and gather relevant details.
     foreach ($sites as $site) {
         $details = get_blog_details($site->blog_id);
-		$url = $details->siteurl;
+        $url = $details->siteurl;
 
-		// Parse the domain from the full URL
-    	$parsed_url = parse_url($url);
-		$domain = $parsed_url['host'] ?? $details->domain;
+        // Parse the domain from the full URL
+        $parsed_url = parse_url($url);
+        $domain = $parsed_url['host'] ?? $details->domain;
 
         $data[] = [
             'blog_id' => $site->blog_id,
             'slug'    => $details->path,
-			'url'     => $url,
-			'domain'  => $domain,
+            'url'     => $url,
+            'domain'  => $domain,
             'name'    => $details->blogname, // May default to root name if not switched.
         ];
     }
@@ -81,7 +84,8 @@ function hale_components_get_api_sites_callback() {
  * Callback for /sites/path endpoint.
  * Returns a list of all sites installed as subdirectories under the root domain.
  */
-function hale_components_get_api_path_callback() {
+function hale_components_get_api_path_callback()
+{
     // Retrieve all sites
     $sites = get_sites();
 
@@ -117,7 +121,8 @@ function hale_components_get_api_path_callback() {
  * Callback for /sites/domain endpoint.
  * Returns a list of all sites that are using a unique domain (i.e., not subdirectory-based).
  */
-function hale_components_get_api_domain_callback() {
+function hale_components_get_api_domain_callback()
+{
     $sites = get_sites();
     $data = [];
 
@@ -125,23 +130,24 @@ function hale_components_get_api_domain_callback() {
         $details = get_blog_details($site->blog_id);
         $url = $details->siteurl;
 
-        // Filter out unwanted domains
+        // Filter out unwanted domains. Filter out exact matches to these domains.
+        // Will include subdomains but not directories.
         if (
             strpos($url, 'hale.docker') !== false ||
-            strpos($url, 'websitebuilder.service.justice.gov.uk') !== false
+            strpos($url, '://websitebuilder.service.justice.gov.uk') !== false
         ) {
             continue;
         }
 
-		// Parse the domain from the full URL
-    	$parsed_url = parse_url($url);
-		$domain = $parsed_url['host'] ?? $details->domain;
-        
-        switch_to_blog( $site->blog_id );
-        $slug = get_option( 'site_path_slug' );
+        // Parse the domain from the full URL
+        $parsed_url = parse_url($url);
+        $domain = $parsed_url['host'] ?? $details->domain;
+
+        switch_to_blog($site->blog_id);
+        $slug = get_option('site_path_slug');
         restore_current_blog();
 
-        if ( empty( $slug ) ) {
+        if (empty($slug)) {
             $slug = 'site-' . $site->blog_id;
         }
 
@@ -150,7 +156,7 @@ function hale_components_get_api_domain_callback() {
             'path'    => $details->path,
             'slug'    => $slug,
             'url'     => $url,
-			'domain'  => $domain,
+            'domain'  => $domain,
             'name'    => $details->blogname,
         ];
     }
@@ -162,8 +168,9 @@ function hale_components_get_api_domain_callback() {
  * Callback for /blocks endpoint.
  * Returns all registered block types in the current site.
  */
-function hale_components_get_api_blocks_callback() {
-	// Get the block type registry
+function hale_components_get_api_blocks_callback()
+{
+    // Get the block type registry
     $registry = WP_Block_Type_Registry::get_instance();
 
     // Get all registered blocks
@@ -176,7 +183,7 @@ function hale_components_get_api_blocks_callback() {
             'name'       => $block->name,
             'title'      => $block->title ?? '',
             'category'   => $block->category ?? '',
-            'description'=> $block->description ?? '',
+            'description' => $block->description ?? '',
         ];
     }
 
@@ -187,15 +194,16 @@ function hale_components_get_api_blocks_callback() {
  * Callback for /blocks/moj endpoint.
  * Returns only registered blocks that start with the 'mojblocks/' namespace.
  */
-function hale_components_get_api_moj_blocks_callback() {
+function hale_components_get_api_moj_blocks_callback()
+{
     $registry = WP_Block_Type_Registry::get_instance();
     $blocks = $registry->get_all_registered();
 
-	$moj_blocks = array_filter($blocks, function( $block ) {
-    	return str_starts_with( $block->name, 'mojblocks/' );
-	});
+    $moj_blocks = array_filter($blocks, function ($block) {
+        return str_starts_with($block->name, 'mojblocks/');
+    });
 
-	$data = [];
+    $data = [];
 
     foreach ($moj_blocks as $block) {
         $data[] = [
@@ -207,5 +215,4 @@ function hale_components_get_api_moj_blocks_callback() {
     }
 
     return rest_ensure_response($data);
-  }
-
+}
