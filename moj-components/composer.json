@@ -4,24 +4,10 @@
   "type": "wordpress-muplugin",
   "license": "MIT",
   "require": {
-    "composer/installers": "^1.0"
+    "composer/installers": "*"
   },
   "require-dev": {
-    "10up/wp_mock": "0.4.2",
-    "phpmd/phpmd": "^2.7",
-    "composer/composer": "*",
-    "squizlabs/php_codesniffer": "*"
-  },
-  "scripts": {
-    "phpcs-config-set": "phpcs --config-set ignore_warnings_on_exit 1",
-    "phpcs": "phpcs --extensions=php --ignore=*/vendor/* --standard=PSR12 .",
-    "phpcbf": "phpcbf --extensions=php --ignore=*/vendor/* --standard=PSR12 .",
-    "test": [
-      "vendor/bin/phpunit",
-      "vendor/bin/phpcs -p",
-      "vendor/bin/phpmd component/ text cleancode,codesize,controversial,design,naming,unusedcode"
-    ],
-    "coverage": "vendor/bin/phpunit --coverage-html coverage --whitelist component"
+    "composer/composer": "*"
   },
   "autoload": {
     "psr-4": {
