@@ -1,5 +1,30 @@
 <?php
 
+include 'site-setup/setup-pages.php'; 
+
+add_action('populate_site', function($blog_id, $user_id, $domain, $path, $site_id, $meta) {
+    remove_action( 'populate_site', 'populate_default_content', 10 );
+}, 5, 6);
+
+add_action( 'wpmu_new_blog', 'hc_site_setup', 10, 6 );
+
+function hc_site_setup( $blog_id, $user_id, $domain, $path, $site_id, $meta ) {
+    switch_to_blog( $blog_id );
+
+    $news_page_id = false;
+
+    if ( isset( $_POST['create_news_cpt'] ) && $_POST['create_news_cpt'] === '1' ) {
+        
+        $news_page_id = create_listing_page_on_new_site();
+    }
+
+    hc_setup_content($news_page_id);
+
+
+
+    restore_current_blog();
+}
+
 add_action( 'network_site_new_form', 'add_news_cpt_checkbox' );
 
 function add_news_cpt_checkbox() {
@@ -19,12 +44,7 @@ function add_news_cpt_checkbox() {
     <?php
 }
 
-add_action( 'wpmu_new_blog', 'create_listing_page_on_new_site', 10, 6 );
-
-function create_listing_page_on_new_site( $blog_id, $user_id, $domain, $path, $site_id, $meta ) {
-
-    if ( isset( $_POST['create_news_cpt'] ) && $_POST['create_news_cpt'] === '1' ) {
-        switch_to_blog( $blog_id );
+function create_listing_page_on_new_site() {
 
         create_news_cpt();
         create_news_articles();
@@ -42,11 +62,11 @@ function create_listing_page_on_new_site( $blog_id, $user_id, $domain, $path, $s
         if ( $page_id && ! is_wp_error( $page_id ) ) {
             update_post_meta( $page_id, '_wp_page_template', 'page-listing.php' );
             update_post_meta( $page_id, 'listing_post_type', 'news' );
+
+            return $page_id;
         }
         
-
-        restore_current_blog();
-    }   
+        return false;
 }
 
 function create_news_cpt(){
