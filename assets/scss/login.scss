@@ -1,10 +1,10 @@
 
-@import "node_modules/govuk-frontend/govuk/base";
-@import "node_modules/govuk-frontend/govuk/core/typography";
-@import 'node_modules/govuk-frontend/govuk/components/notification-banner/notification-banner';
-@import 'node_modules/govuk-frontend/govuk/components/label/label';
-@import 'node_modules/govuk-frontend/govuk/components/input/input';
-@import 'node_modules/govuk-frontend/govuk/components/button/button';
+@import "../../node_modules/govuk-frontend/govuk/base";
+@import "../../node_modules/govuk-frontend/govuk/core/typography";
+@import '../../node_modules/govuk-frontend/govuk/components/notification-banner/notification-banner';
+@import '../../node_modules/govuk-frontend/govuk/components/label/label';
+@import '../../node_modules/govuk-frontend/govuk/components/input/input';
+@import '../../node_modules/govuk-frontend/govuk/components/button/button';
 
 
 #login h1 a,
