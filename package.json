@@ -34,8 +34,7 @@
         "postcss": "^8.3.5",
         "resolve-url-loader": "*",
         "sass": "*",
-        "sass-loader": "*",
-        "vue-template-compiler": "*"
+        "sass-loader": "*"
     },
     "dependencies": {
         "@babel/core": "*",
