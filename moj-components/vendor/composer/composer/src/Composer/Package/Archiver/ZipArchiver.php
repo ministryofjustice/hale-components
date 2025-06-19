@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 /*
  * This file is part of Composer.
@@ -12,8 +12,9 @@
 
 namespace Composer\Package\Archiver;
 
-use ZipArchive;
 use Composer\Util\Filesystem;
+use Composer\Util\Platform;
+use ZipArchive;
 
 /**
  * @author Jan Prieser <jan@prieser.net>
@@ -21,16 +22,21 @@ use Composer\Util\Filesystem;
 class ZipArchiver implements ArchiverInterface
 {
     /** @var array<string, bool> */
-    protected static $formats = array(
+    protected static $formats = [
         'zip' => true,
-    );
+    ];
 
     /**
      * @inheritDoc
      */
-    public function archive($sources, $target, $format, array $excludes = array(), $ignoreFilters = false)
+    public function archive(string $sources, string $target, string $format, array $excludes = [], bool $ignoreFilters = false): string
     {
         $fs = new Filesystem();
+        $sourcesRealpath = realpath($sources);
+        if (false !== $sourcesRealpath) {
+            $sources = $sourcesRealpath;
+        }
+        unset($sourcesRealpath);
         $sources = $fs->normalizePath($sources);
 
         $zip = new ZipArchive();
@@ -38,32 +44,49 @@ class ZipArchiver implements ArchiverInterface
         if ($res === true) {
             $files = new ArchivableFilesFinder($sources, $excludes, $ignoreFilters);
             foreach ($files as $file) {
-                /** @var \SplFileInfo $file */
-                $filepath = strtr($file->getPath()."/".$file->getFilename(), '\\', '/');
-                $localname = $filepath;
-                if (strpos($localname, $sources . '/') === 0) {
-                    $localname = substr($localname, strlen($sources . '/'));
+                /** @var \Symfony\Component\Finder\SplFileInfo $file */
+                $filepath = $file->getPathname();
+                $relativePath = $file->getRelativePathname();
+
+                if (Platform::isWindows()) {
+                    $relativePath = strtr($relativePath, '\\', '/');
                 }
+
                 if ($file->isDir()) {
-                    $zip->addEmptyDir($localname);
+                    $zip->addEmptyDir($relativePath);
                 } else {
-                    $zip->addFile($filepath, $localname);
+                    $zip->addFile($filepath, $relativePath);
                 }
 
                 /**
-                 * ZipArchive::setExternalAttributesName is available from >= PHP 5.6
                  * setExternalAttributesName() is only available with libzip 0.11.2 or above
                  */
-                if (PHP_VERSION_ID >= 50600 && method_exists($zip, 'setExternalAttributesName')) {
+                if (method_exists($zip, 'setExternalAttributesName')) {
                     $perms = fileperms($filepath);
 
                     /**
                      * Ensure to preserve the permission umasks for the filepath in the archive.
                      */
-                    $zip->setExternalAttributesName($localname, ZipArchive::OPSYS_UNIX, $perms << 16);
+                    $zip->setExternalAttributesName($relativePath, ZipArchive::OPSYS_UNIX, $perms << 16);
                 }
             }
             if ($zip->close()) {
+                if (!file_exists($target)) {
+                    // create minimal valid ZIP file (Empty Central Directory + End of Central Directory record)
+                    $eocd = pack(
+                        'VvvvvVVv',
+                        0x06054b50,  // End of central directory signature
+                        0,           // Number of this disk
+                        0,           // Disk where central directory starts
+                        0,           // Number of central directory records on this disk
+                        0,           // Total number of central directory records
+                        0,           // Size of central directory (bytes)
+                        0,           // Offset of start of central directory
+                        0            // Comment length
+                    );
+                    file_put_contents($target, $eocd);
+                }
+
                 return $target;
             }
         }
@@ -79,15 +102,12 @@ class ZipArchiver implements ArchiverInterface
     /**
      * @inheritDoc
      */
-    public function supports($format, $sourceType)
+    public function supports(string $format, ?string $sourceType): bool
     {
         return isset(static::$formats[$format]) && $this->compressionAvailable();
     }
 
-    /**
-     * @return bool
-     */
-    private function compressionAvailable()
+    private function compressionAvailable(): bool
     {
         return class_exists('ZipArchive');
     }
