@@ -100,7 +100,6 @@ function hc_generate_user_report() {
 
         if(is_array($users) && count($users) > 0){
 
-            set_query_var('generate_user_report_status', 'success'); 
             header('Content-Type: text/csv');
             header('Content-Disposition: attachment; filename="' . $file_name . '"');
             header('Pragma: no-cache');
@@ -123,15 +122,6 @@ function hc_generate_user_report() {
             fclose($output);
             exit;
         }
-        else{
-            set_query_var('generate_user_report_status', 'no-users'); 
-        }
 
     }
 }
-
-
-add_filter('query_vars', function($vars) {
-    $vars[] = 'generate_user_report_status';
-    return $vars;
-});
