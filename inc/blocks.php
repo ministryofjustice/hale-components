@@ -3,7 +3,7 @@
     Functions that alter blocks
 */
 
-//Accessbility fix for table block headers
+//Accessibility fix for table block headers
 add_filter( 'render_block_core/table', function( $block_content, $block ) {
 
     // Only process if any <th> exists
