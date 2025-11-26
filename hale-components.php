@@ -17,6 +17,7 @@ License: MIT
 include 'inc/search-replace-database.php'; 
 include 'inc/site-path-track.php'; 
 include 'inc/login-settings.php';
+include 'inc/blocks.php';
 
 // Only include the network dashboard if this is a multisite setup
 if (is_multisite()) {
