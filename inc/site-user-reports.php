@@ -43,6 +43,11 @@ function hc_get_user_email_domains_multisite() {
 }
 
 function hc_render_site_user_reports_page() {
+
+    if(!current_user_can('list_users')){
+        wp_die('User does not have the permissions to do this action');
+    }
+    
     $domains = hc_get_user_email_domains_multisite();
     ?>
     <div class="wrap">
@@ -74,6 +79,10 @@ add_action('init', 'hc_generate_site_user_report');
 function hc_generate_site_user_report() {
 
     if ( isset($_POST['generate_site_user_report']) ) {
+
+        if(!current_user_can('list_users')){
+            wp_die('User does not have the permissions to do this action');
+        }
 
         if ( ! isset($_POST['generate_site_user_report_nonce']) || ! wp_verify_nonce($_POST['generate_site_user_report_nonce'], 'generate_site_user_report_action') ) {
             wp_die('Security check failed.');
