@@ -66,7 +66,7 @@ function hc_render_site_user_reports_page() {
                     </option>
                 <?php endforeach; ?>
             </select>
-            <?php  submit_button('Generate Report', 'generate_site_user_report', 'generate_site_user_report');; ?>
+            <?php  submit_button('Generate Report', 'generate_site_user_report', 'generate_site_user_report'); ?>
         </form>
 
        
