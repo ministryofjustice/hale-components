@@ -17,14 +17,16 @@ License: MIT
 include 'inc/search-replace-database.php'; 
 include 'inc/site-path-track.php'; 
 include 'inc/login-settings.php';
+include 'inc/site-user-reports.php'; 
 include 'inc/blocks.php';
+
 
 // Only include the network dashboard if this is a multisite setup
 if (is_multisite()) {
     include 'inc/network-dashboard.php'; 
 	include 'inc/register-rest-api-routes.php';
     include 'inc/clean-up-users.php'; 
-    include 'inc/user-reports.php'; 
+    include 'inc/network-user-reports.php'; 
 }
 
 include 'moj-components/moj-components.php'; 
