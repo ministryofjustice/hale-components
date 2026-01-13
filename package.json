@@ -27,8 +27,6 @@
     "homepage": "https://github.com/ministryofjustice/hale-components/#readme",
     "author": "MoJ",
     "devDependencies": {
-        "@babel/preset-env": "*",
-        "copy-webpack-plugin": "*",
         "cross-env": "*",
         "laravel-mix": "*",
         "postcss": "^8.3.5",
@@ -37,8 +35,6 @@
         "sass-loader": "*"
     },
     "dependencies": {
-        "@babel/core": "*",
-        "govuk-frontend": "^4.6.0",
-        "tippy.js": "*"
+        "govuk-frontend": "^4.6.0"
     }
 }
