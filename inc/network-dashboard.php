@@ -99,6 +99,6 @@ function hc_set_waf_bypass_cookie()
 
     // Setting to edit posts excludes subscribers
     if (current_user_can('edit_posts')) {
-        setcookie('WB_CONFIG', $wb_config_env_value, time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN);
+        setcookie('WB_CONFIG', $wb_config_env_value, time() + DAY_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
     }
 }
