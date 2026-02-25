@@ -3,6 +3,87 @@
 use Aws\CloudFront\CloudFrontClient;
 use Aws\Exception\AwsException;
 
+
+/**
+ * Invalidate CloudFront cache before an attachment is deleted from the WP attachment table.
+ *
+ * This function checks if an attachment URL is on the CDN.
+ * If it is, then we invalidate that path on CloudFront.
+ *
+ * LIMITATIONS:
+ * - doesn't clear multiple image sizes, e.g. image-300x200.jpg
+ * - currently, we don't set $blocking, so a user may see that the file is 
+ *   still cached for a short while, after they have deleted it.
+ *
+ * @see https://developer.wordpress.org/reference/hooks/pre_delete_attachment/
+ *
+ * @param WP_Post|false|null $delete The current delete value passed by the filter.
+ * @param WP_Post            $post   The attachment post object.
+ *
+ * @return WP_Post|false|null The filtered delete value, or false to prevent deletion.
+ */
+function hale_components_invalidate_cloudfront_cache(WP_Post|false|null $delete, WP_Post $post)
+{
+
+    if ($delete === false) {
+        // If $delete is already false, then do nothing.
+        return $delete;
+    }
+
+    $attachment_url = wp_get_attachment_url($post->ID);
+
+    if (!$attachment_url) {
+        // For whatever reason, we don't have an attachment URL, do nothing.
+        return $delete;
+    }
+
+    $cdn_hosts = [
+        'cdn.websitebuilder.service.justice.gov.uk',
+        'cdn.demo.websitebuilder.service.justice.gov.uk',
+        'cdn.dev.websitebuilder.service.justice.gov.uk',
+        'cdn.staging.websitebuilder.service.justice.gov.uk',
+    ];
+
+    $attachment_url_parts = parse_url($attachment_url);
+
+    if (!$attachment_url_parts || !isset($attachment_url_parts['host'], $attachment_url_parts['path'])) {
+        // The URL wasn't parsed successfully.
+        return $delete;
+    }
+
+    if (!in_array($attachment_url_parts['host'], $cdn_hosts, true)) {
+        // The attachment URL is not on a CDN, so do nothing.
+        return $delete;
+    }
+
+    // If we are here, then we should be invalidating the CloudFront cache.
+
+    try {
+        // Trigger the invalidation - don't block the delete request by waiting for success.
+        hale_components_invalidate_cloudfront_path(
+            $attachment_url_parts['path'],
+            'attachment-' . $post->ID
+        );
+        // If we are here, then the status is either InProgress or Completed.
+    } catch (Throwable $t) {
+        // If we are here, then something went wrong.
+        // Log the error.
+        error_log($t->getMessage());
+
+        // Cache clearing wasn't successful.
+        // Don't delete the attachment (from WP database).
+        // The user will see an alert with:
+        // Error in deleting the attachment.
+        return false;
+    }
+
+    // There were no errors - continue to delete the attachment from WP attachments table.
+    return $delete;
+};
+
+add_filter('pre_delete_attachment', 'hale_components_invalidate_cloudfront_cache', 100, 2);
+
+
 /**
  * Create (or retry) a single-file CloudFront cache invalidation.
  *
@@ -136,77 +217,3 @@ function hale_components_poll_cloudfront_invalidation(
 }
 
 
-
-/**
- * Invalidate CloudFront cache before an attachment is deleted from the WP attachment table.
- *
- * This function checks if an attachment URL is on the CDN.
- * If it is, then we invalidate that path on CloudFront.
- *
- * @see https://developer.wordpress.org/reference/hooks/pre_delete_attachment/
- *
- * @param WP_Post|false|null $delete The current delete value passed by the filter.
- * @param WP_Post            $post   The attachment post object.
- *
- * @return WP_Post|false|null The filtered delete value, or false to prevent deletion.
- */
-function hale_components_invalidate_cloudfront_cache(WP_Post|false|null $delete, WP_Post $post)
-{
-
-    if ($delete === false) {
-        // If $delete is already false, then do nothing.
-        return $delete;
-    }
-
-    $attachment_url = wp_get_attachment_url($post->ID);
-
-    if (!$attachment_url) {
-        // For whatever reason, we don't have an attachment URL, do nothing.
-        return $delete;
-    }
-
-    $cdn_hosts = [
-        'cdn.websitebuilder.service.justice.gov.uk',
-        'cdn.demo.websitebuilder.service.justice.gov.uk',
-        'cdn.dev.websitebuilder.service.justice.gov.uk',
-        'cdn.staging.websitebuilder.service.justice.gov.uk',
-    ];
-
-    $attachment_url_parts = parse_url($attachment_url);
-
-    if (!$attachment_url_parts || !isset($attachment_url_parts['host'], $attachment_url_parts['path'])) {
-        // The URL wasn't parsed successfully.
-        return $delete;
-    }
-
-    if (!in_array($attachment_url_parts['host'], $cdn_hosts, true)) {
-        // The attachment URL is not on a CDN, so do nothing.
-        return $delete;
-    }
-
-    // If we are here, then we should be invalidating the CloudFront cache.
-
-    try {
-        // Trigger the invalidation - don't block the delete request by waiting for success.
-        hale_components_invalidate_cloudfront_path(
-            $attachment_url_parts['path'],
-            'attachment-' . $post->ID
-        );
-        // If we are here, then the status is either InProgress or Completed.
-    } catch (Throwable $t) {
-        // If we are here, then something went wrong.
-        // Log the error.
-        error_log($t->getMessage());
-
-        // Cache clearing wasn't successful.
-        // Don't delete the attachment (from WP database).
-        // The user will see an alert with:
-        // Error in deleting the attachment.
-        return false;
-    }
-
-    // There were no errors - continue to delete the attachment from WP attachments table.
-    return $delete;
-};
-
-add_filter('pre_delete_attachment', 'hale_components_invalidate_cloudfront_cache', 100, 2);
