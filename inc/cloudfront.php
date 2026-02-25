@@ -157,12 +157,15 @@ function hale_components_invalidate_cloudfront_cache(WP_Post|false|null $delete,
     // If we are here, then we should be invalidating the CloudFront cache.
 
     try {
+        // Trigger the invalidation - don't block the delete request by waiting for success.
         hale_components_invalidate_cloudfront_path(
             $attachment_url_parts['path'],
-            'attachment-' . $post->ID   // ← your unique ID
-            // Optionally pass SDK options, e.g. ['credentials' => [...]]
+            'attachment-' . $post->ID
         );
+        // If we are here, then the status is either InProgress or Completed.
     } catch (Throwable $t) {
+        // If we are here, then something went wrong.
+        // Log the error.
         error_log($t->getMessage());
 
         // Cache clearing wasn't successful.
