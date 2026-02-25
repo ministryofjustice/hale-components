@@ -4,9 +4,24 @@ use Aws\CloudFront\CloudFrontClient;
 use Aws\Exception\AwsException;
 
 /**
- * Create (or reuse) a single-file invalidation by callerReference and wait until completion.
- * If an invalidation with the same callerReference & same path already exists,
- * CloudFront returns that existing invalidation, and we just poll it.
+ * Create (or retry) a single-file CloudFront cache invalidation.
+ *
+ * Uses callerReference for idempotency: if an invalidation with the same
+ * callerReference & path already exists, CloudFront returns that existing
+ * invalidation rather than creating a new one.
+ *
+ * By default, returns immediately after initiating the invalidation. Set
+ * $blocking to true to poll until the invalidation completes or times out.
+ *
+ * @param string $path             The path to invalidate (e.g., '/uploads/2026/02/image.jpg').
+ * @param string $caller_reference A unique reference for idempotency (e.g., 'attachment-123').
+ * @param bool   $blocking         Whether to wait for the invalidation to complete. Default false.
+ * @param array  $client_options   Optional overrides for the CloudFrontClient configuration.
+ * @param int    $timeout_seconds  Maximum seconds to wait when blocking. Default 180.
+ *
+ * @return array{Id: string, Status: string, Path: string, CreateTime: \DateTimeInterface} Invalidation details.
+ *
+ * @throws RuntimeException If AWS SDK is missing, required constants are undefined, or the API call fails.
  */
 function hale_components_invalidate_cloudfront_path(
     string $path,
@@ -76,7 +91,17 @@ function hale_components_invalidate_cloudfront_path(
 }
 
 /**
- * Poll helper.
+ * Poll CloudFront until an invalidation completes or times out.
+ *
+ * @param CloudFrontClient $client          The configured CloudFront client.
+ * @param string           $distribution_id The CloudFront distribution ID.
+ * @param string           $invalidationId  The invalidation ID to poll.
+ * @param int              $timeout_seconds Maximum seconds to wait before timing out.
+ * @param string           $path            The path being invalidated (for logging).
+ *
+ * @return array{Id: string, Status: string, Path: string, CreateTime: \DateTimeInterface} Invalidation details.
+ *
+ * @throws RuntimeException If the invalidation does not complete within the timeout.
  */
 function hale_components_poll_cloudfront_invalidation(
     CloudFrontClient $client,
@@ -113,12 +138,17 @@ function hale_components_poll_cloudfront_invalidation(
 
 
 /**
- * Invalidate CloudFront cache, before an attachment is deleted from the WP attachment table.
+ * Invalidate CloudFront cache before an attachment is deleted from the WP attachment table.
  *
- * This function checks if an attachment url is on the cdn. 
+ * This function checks if an attachment URL is on the CDN.
  * If it is, then we invalidate that path on CloudFront.
  *
  * @see https://developer.wordpress.org/reference/hooks/pre_delete_attachment/
+ *
+ * @param WP_Post|false|null $delete The current delete value passed by the filter.
+ * @param WP_Post            $post   The attachment post object.
+ *
+ * @return WP_Post|false|null The filtered delete value, or false to prevent deletion.
  */
 function hale_components_invalidate_cloudfront_cache(WP_Post|false|null $delete, WP_Post $post)
 {
