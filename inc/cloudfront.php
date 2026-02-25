@@ -50,7 +50,7 @@ function hale_components_invalidate_cloudfront_path(
         $invalidationId = $create['Invalidation']['Id'];
 
         if (!$blocking) {
-            echo "Invalidation initialised for {$path}. (Id: {$invalidationId})\n";
+            error_log("Invalidation initialised for {$path}. (Id: {$invalidationId})");
             return [
                 'Id'         => $invalidationId,
                 'Status'     => $create['Invalidation']['Status'],
@@ -89,14 +89,14 @@ function pollInvalidation(
             'Id' => $invalidationId,
         ]);
         $status = $desc['Invalidation']['Status'];
-        echo "Status: {$status}\n";
+        error_log("Status: {$status}");
 
         if ((time() - $start) > $timeout_seconds) {
             throw new RuntimeException("Timed out waiting for CloudFront invalidation to complete.");
         }
     } while ($status !== 'Completed');
 
-    echo "Invalidation completed for {$path}. (Id: {$invalidationId})\n";
+    error_log("Invalidation completed for {$path}. (Id: {$invalidationId})");
 
     return [
         'Id'         => $invalidationId,
