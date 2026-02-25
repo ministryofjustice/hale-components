@@ -18,11 +18,15 @@ function hale_components_invalidate_cloudfront_path(
 
     // Ensure the AWS SDK can be loaded.
     if (! class_exists('\\Aws\\CloudFront\\CloudFrontClient')) {
-        throw new Error('Cloudfront cache clearing requires the AWS SDK. Ensure Composer dependencies have been loaded.');
+        throw new RuntimeException('Cloudfront cache clearing requires the AWS SDK. Ensure Composer dependencies have been loaded.');
     }
 
     if (! defined('CLOUDFRONT_DISTRIBUTION_ID')) {
-        throw new Error('CLOUDFRONT_DISTRIBUTION_ID constant is required. Please define it in your wp-config.php');
+        throw new RuntimeException('CLOUDFRONT_DISTRIBUTION_ID constant is required. Please define it in your wp-config.php');
+    }
+
+    if (! defined('S3_UPLOADS_REGION')) {
+        throw new RuntimeException('S3_UPLOADS_REGION constant is required. Please define it in your wp-config.php');
     }
 
     $distribution_id = CLOUDFRONT_DISTRIBUTION_ID;
@@ -30,7 +34,7 @@ function hale_components_invalidate_cloudfront_path(
     // ---- Client ----
     $client = new CloudFrontClient(array_replace([
         'region'  => S3_UPLOADS_REGION,
-        'version' => 'latest',
+        'version' => '2020-05-31',
     ], $client_options));
 
     try {
@@ -61,7 +65,7 @@ function hale_components_invalidate_cloudfront_path(
 
 
         // ---- Poll until Completed or timeout ----
-        return pollInvalidation($client, $distribution_id, $invalidationId, $timeout_seconds, $path);
+        return hale_components_poll_cloudfront_invalidation($client, $distribution_id, $invalidationId, $timeout_seconds, $path);
     } catch (AwsException $e) {
         // If you reused the same callerReference with *different* paths,
         // CloudFront will throw an error; surface that clearly.
@@ -74,7 +78,7 @@ function hale_components_invalidate_cloudfront_path(
 /**
  * Poll helper.
  */
-function pollInvalidation(
+function hale_components_poll_cloudfront_invalidation(
     CloudFrontClient $client,
     string $distribution_id,
     string $invalidationId,
@@ -120,14 +124,14 @@ function hale_components_invalidate_cloudfront_cache(WP_Post|false|null $delete,
 {
 
     if ($delete === false) {
-        // If $delete is already false, then do noting.
+        // If $delete is already false, then do nothing.
         return $delete;
     }
 
     $attachment_url = wp_get_attachment_url($post->ID);
 
     if (!$attachment_url) {
-        // For whatever reason, we don't have an attachment URL, do noting.
+        // For whatever reason, we don't have an attachment URL, do nothing.
         return $delete;
     }
 
@@ -139,6 +143,11 @@ function hale_components_invalidate_cloudfront_cache(WP_Post|false|null $delete,
     ];
 
     $attachment_url_parts = parse_url($attachment_url);
+
+    if (!$attachment_url_parts || !isset($attachment_url_parts['host'], $attachment_url_parts['path'])) {
+        // The URL wasn't parsed successfully.
+        return $delete;
+    }
 
     if (!in_array($attachment_url_parts['host'], $cdn_hosts, true)) {
         // The attachment URL is not on a CDN, so do nothing.
@@ -154,9 +163,7 @@ function hale_components_invalidate_cloudfront_cache(WP_Post|false|null $delete,
             // Optionally pass SDK options, e.g. ['credentials' => [...]]
         );
     } catch (Throwable $t) {
-        // Centralized error reporting/logging
         error_log($t->getMessage());
-        // echo "Error: " . $t->getMessage() . PHP_EOL;
 
         // Cache clearing wasn't successful.
         // Don't delete the attachment (from WP database).
