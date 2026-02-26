@@ -37,13 +37,6 @@ function hale_components_invalidate_cloudfront_cache(WP_Post|false|null $delete,
         return $delete;
     }
 
-    $cdn_hosts = [
-        'cdn.websitebuilder.service.justice.gov.uk',
-        'cdn.demo.websitebuilder.service.justice.gov.uk',
-        'cdn.dev.websitebuilder.service.justice.gov.uk',
-        'cdn.staging.websitebuilder.service.justice.gov.uk',
-    ];
-
     $attachment_url_parts = parse_url($attachment_url);
 
     if (!$attachment_url_parts || !isset($attachment_url_parts['host'], $attachment_url_parts['path'])) {
@@ -51,7 +44,7 @@ function hale_components_invalidate_cloudfront_cache(WP_Post|false|null $delete,
         return $delete;
     }
 
-    if (!in_array($attachment_url_parts['host'], $cdn_hosts, true)) {
+    if (!hale_components_host_is_a_cdn($attachment_url_parts['host'])) {
         // The attachment URL is not on a CDN, so do nothing.
         return $delete;
     }
@@ -85,6 +78,27 @@ add_filter('pre_delete_attachment', 'hale_components_invalidate_cloudfront_cache
 
 
 /**
+ * Check if a host is CloudFront.
+ *
+ * This checks against AWS CF hosts. e.g. abc123xyz.cloudfront.net
+ * And, alias hosts that are based on the WB domain, e.g.
+ * - cdn.websitebuilder.service.justice.gov.uk
+ * - cdn.dev.websitebuilder.service.justice.gov.uk
+ *
+ * @param string $host The host to be checked.
+ * @return bool  Does the host match a CDN one?
+ */
+function hale_components_host_is_a_cdn(string $host): bool
+{
+    $cdn_aws_pattern = "^\w+\.cloudfront\.net$";
+    $cdn_alias_pattern = "^cdn\.(\w+\.)?websitebuilder\.service\.justice\.gov\.uk$";
+    $combined_pattern = "/($cdn_aws_pattern)|($cdn_alias_pattern)/";
+
+    return preg_match($combined_pattern, $host);
+}
+
+
+/**
  * Create (or retry) a single-file CloudFront cache invalidation.
  *
  * Uses callerReference for idempotency: if an invalidation with the same
@@ -110,7 +124,7 @@ function hale_components_invalidate_cloudfront_path(
     bool $blocking = false,
     array $client_options = [],
     int $timeout_seconds = 180
-): array|false {
+): array {
 
     // Ensure the AWS SDK can be loaded.
     if (! class_exists('\\Aws\\CloudFront\\CloudFrontClient')) {
@@ -215,5 +229,3 @@ function hale_components_poll_cloudfront_invalidation(
         'CreateTime' => $desc['Invalidation']['CreateTime'],
     ];
 }
-
-
