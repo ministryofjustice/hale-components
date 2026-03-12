@@ -45,7 +45,7 @@ function hale_components_invalidate_cache_on_pre_delete_attachment(WP_Post|false
         // Trigger the invalidation - don't block the delete request by waiting for success.
         hale_components_invalidate_cloudfront_path(
             $attachment_props['path'],
-            'attachment-' . get_current_blog_id() . '-' . get_the_guid($post) . '-' . $post->ID
+            'attachment-' . get_current_blog_id() . '-' . $post->ID . '-' . time()
         );
         // If we are here, then the status is either InProgress or Completed.
     } catch (Throwable $t) {
@@ -89,7 +89,7 @@ function hale_components_invalidate_cache_on_delete_attachment(int $post_id)
     try {
         hale_components_invalidate_cloudfront_path(
             $attachment_props['path'],
-            'delete_attachment-' . $post_id
+            'delete_attachment-' . get_current_blog_id() . '-' . $post_id . '-' . time()
         );
     } catch (Throwable $t) {
         error_log($t->getMessage());
@@ -207,7 +207,7 @@ function hale_components_invalidate_cloudfront_path(
         $create = $client->createInvalidation([
             'DistributionId' => $distribution_id,
             'InvalidationBatch' => [
-                // 'CallerReference' => $caller_reference,
+                'CallerReference' => $caller_reference,
                 'Paths' => [
                     'Quantity' => 1,
                     'Items' => [$path],
