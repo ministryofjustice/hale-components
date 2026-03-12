@@ -207,7 +207,7 @@ function hale_components_invalidate_cloudfront_path(
         $create = $client->createInvalidation([
             'DistributionId' => $distribution_id,
             'InvalidationBatch' => [
-                'CallerReference' => $caller_reference,
+                // 'CallerReference' => $caller_reference,
                 'Paths' => [
                     'Quantity' => 1,
                     'Items' => [$path],
