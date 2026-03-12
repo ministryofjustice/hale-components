@@ -45,7 +45,7 @@ function hale_components_invalidate_cache_on_pre_delete_attachment(WP_Post|false
         // Trigger the invalidation - don't block the delete request by waiting for success.
         hale_components_invalidate_cloudfront_path(
             $attachment_props['path'],
-            'attachment-' . $post->ID
+            'attachment-' . get_current_blog_id() . '-' . $post->ID
         );
         // If we are here, then the status is either InProgress or Completed.
     } catch (Throwable $t) {
