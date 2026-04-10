@@ -110,6 +110,26 @@ function hale_delete_unassigned_users($unassigned_users, $reassign_user_id) {
     }
 }
 
+function hale_delete_unconfirmed_users() {
+    global $wpdb;
+
+    $cutoff_date = date(
+        'Y-m-d H:i:s',
+        strtotime('-14 days', current_time('timestamp'))
+    );
+
+    $wpdb->query(
+        $wpdb->prepare(
+            "
+            DELETE FROM {$wpdb->signups}
+            WHERE active = 0
+            AND registered < %s
+            ",
+            $cutoff_date
+        )
+    );
+}
+
 function hale_reassign_unassigned_users_content($user_id, $reassign_user_id) {
     $sites = get_sites();
     foreach ( $sites as $site ) {
@@ -133,3 +153,36 @@ function hale_reassign_unassigned_users_content($user_id, $reassign_user_id) {
         restore_current_blog();
     }
 }
+
+function hale_cleanup_users() {
+
+    //Delete Users that are not assigned to any website
+    $unassigned_users = hale_get_unassigned_users();
+
+    if (!function_exists('wpmu_delete_user')) {
+        require_once ABSPATH . 'wp-admin/includes/ms.php';
+    }
+    hale_delete_unassigned_users($unassigned_users, '');
+
+    //Delete Unconfirmed Users after 14 days
+    hale_delete_unconfirmed_users();
+}
+
+add_action('hale_cleanup_users_cron', 'hale_cleanup_users');
+// Schedule at next 3am
+if ( ! wp_next_scheduled('hale_cleanup_users_cron') ) {
+    
+    // Get today's 3am
+    $today_3am = strtotime('today 3:00', $now);
+
+    // If 3am has already passed, schedule for tomorrow
+    if ($now >= $today_3am) {
+        $timestamp = strtotime('tomorrow 3:00', $now);
+    } else {
+        $timestamp = $today_3am;
+    }
+
+
+    wp_schedule_event($timestamp, 'daily', 'hale_cleanup_users_cron');
+}
+
