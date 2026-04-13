@@ -1,0 +1,208 @@
+<?php
+
+declare(strict_types=1);
+
+namespace MOJComponents\AdminSettings;
+
+use MOJComponents\TaxonomyUpdater\TaxonomyUpdater;
+use MOJComponents\ImportUsers\ImportUsers;
+use MOJComponents\AcfFieldUpdater\AcfFieldUpdater;
+
+class AdminSettings
+{
+    public $helper;
+
+    /** @var array<int, array{key: int, class: string}> */
+    public array $tabs = [];
+
+    /** @var array<int, mixed> */
+    public array $content = [];
+
+    /** Current settings object being processed. */
+    public object|string $object = '';
+
+    public function __construct()
+    {
+        global $mojHelper;
+        $this->helper = $mojHelper;
+        $this->actions();
+    }
+
+    public function actions(): void
+    {
+        add_action('admin_enqueue_scripts', [$this, 'enqueue']);
+        add_action('admin_init', [$this, 'settings'], 11);
+        add_action('admin_menu', [$this, 'page']);
+        add_action('admin_init', [$this, 'mojColourSchemes']);
+    }
+
+    public function enqueue(): void
+    {
+        $currentScreen = get_current_screen();
+
+        if ($currentScreen->base === 'toplevel_page_mojComponentSettings') {
+            wp_enqueue_style('settings_admin_css', $this->helper->cssPath(__FILE__) . 'main.css', []);
+            wp_enqueue_script('settings_admin_js', $this->helper->jsPath(__FILE__) . 'main.js', ['jquery']);
+        }
+    }
+
+    public function page(): void
+    {
+        $taxonomyUpdater  = new TaxonomyUpdater();
+        $importUsers      = new ImportUsers();
+        $acfFieldUpdater  = new AcfFieldUpdater();
+
+        add_menu_page(
+            'General settings',
+            'Hale Components',
+            'manage_options',
+            'mojComponentSettings',
+            [$this, 'content'],
+            '',
+            99
+        );
+
+        add_submenu_page(
+            'mojComponentSettings',
+            'Taxonomy Updater',
+            'Taxonomy Updater',
+            'manage_options',
+            'taxonomy-updater',
+            [$taxonomyUpdater, 'renderTool']
+        );
+
+        add_submenu_page(
+            'mojComponentSettings',
+            'ACF Field Updater',
+            'ACF Field Updater',
+            'manage_options',
+            'acf-field-updater',
+            [$acfFieldUpdater, 'renderTool']
+        );
+
+        add_submenu_page(
+            'mojComponentSettings',
+            'Import Users',
+            'Import Users',
+            'manage_options',
+            'import-users',
+            [$importUsers, 'renderTool']
+        );
+    }
+
+    public function mojColourSchemes(): void
+    {
+        wp_admin_css_color(
+            'moj_dt',
+            __('MoJ Digital & Technology', 'wp-moj-components'),
+            $this->helper->cssPath(__FILE__) . 'scheme/moj-dt/colours.css',
+            ['#0b0c0c', '#626a6e', '#2c5d94', '#1d70b8']
+        );
+    }
+
+    /** @return array<int, array{key: int, class: string}> */
+    public function settings(): array
+    {
+        register_setting('mojComponentSettings', 'moj_component_settings');
+
+        foreach ($this->helper->adminSettings as $key => $class) {
+            $this->object = new $class();
+            $hasSettings  = $this->object->hasSettings ?? false;
+
+            if ($hasSettings !== true) {
+                continue;
+            }
+
+            $thisClass  = get_class($this->object);
+            $thisClass  = str_replace('\\', '/', $thisClass);
+            $className  = $this->helper->splitCamelCase(basename($thisClass));
+
+            $this->tabs[] = [
+                'key'   => $key,
+                'class' => str_replace(' Settings', '', $className),
+            ];
+
+            add_settings_section(
+                'component-tab-' . $key,
+                $className,
+                [$this->object, 'settingsSectionCB'],
+                'mojComponentSettings'
+            );
+
+            $this->object->settingsFields('component-tab-' . $key);
+        }
+
+        return $this->tabs;
+    }
+
+    public function content(): void
+    {
+        ?>
+        <form action='options.php' method='post'>
+
+            <h1>Hale Components</h1>
+
+            <?php
+            echo '<h2 class="nav-tab-wrapper">';
+            foreach ($this->tabs as $tab) {
+                echo '<a href="#component-tab-' . esc_attr((string) $tab['key']) . '" class="nav-tab">'
+                    . esc_html($tab['class']) . '</a>';
+            }
+            echo '</h2>';
+
+            settings_fields('mojComponentSettings');
+            $this->doSettingsSections('mojComponentSettings');
+
+            echo '<hr>';
+
+            submit_button();
+            ?>
+
+        </form>
+        <?php
+    }
+
+    /**
+     * @SuppressWarnings(PHPMD.CamelCaseVariableName)
+     */
+    public function doSettingsSections(string $page): void
+    {
+        global $wp_settings_sections, $wp_settings_fields;
+
+        if (!isset($wp_settings_sections[$page])) {
+            return;
+        }
+
+        foreach ((array) $wp_settings_sections[$page] as $key => $section) {
+            echo '<div id="' . $key . '" class="moj-component-settings-section">';
+
+            if ($section['title']) {
+                echo "<h2>{$section['title']}</h2>\n";
+            }
+
+            if ($section['callback']) {
+                call_user_func($section['callback'], $section);
+            }
+
+            if (
+                !isset($wp_settings_fields) ||
+                !isset($wp_settings_fields[$page]) ||
+                !isset($wp_settings_fields[$page][$section['id']])
+            ) {
+                echo '</div>';
+                continue;
+            }
+
+            echo '<table class="form-table">';
+            do_settings_fields($page, $section['id']);
+            echo '</table>';
+            echo '</div>';
+        }
+    }
+
+    /** @return array<int, mixed> */
+    public function getSettings(): array
+    {
+        return $this->helper->adminSettings;
+    }
+}
