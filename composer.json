@@ -8,6 +8,14 @@
 	"require": {
 		"composer/installers": "~1.0 || ^2.0"
 	},
+	"require-dev": {
+		"composer/composer": "*"
+	},
+	"autoload": {
+		"psr-4": {
+			"MOJComponents\\": "component/"
+		}
+	},
 	"config": {
 		"allow-plugins": {
 			"composer/installers": true
