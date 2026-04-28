@@ -4,7 +4,7 @@
  * Replace symlink mount path (/mnt/dev/) with target path (/var/www/html/wp-content/).
  *
  * This. fix is not specific for this plugin, it will apply anywhere plugins_url is called.
- * It fixes an issue where the value for `$plugin` is a path that WordPrss doesn't recognise,
+ * It fixes an issue where the value for `$plugin` is a path that WordPress doesn't recognise,
  * e.g. /mnt/dev/mu-plugins/hale-components/moj-components/component/Users/UserSwitch.php
  *
  * - A find and replace is used to reformat the `$plugin` value.
