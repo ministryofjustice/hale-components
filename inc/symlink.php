@@ -32,12 +32,13 @@ function hale_components_reformat_plugin_urls ($url, $path, $plugin) {
 
     // Remove the filter, so that we never enter an infinite loop.
     remove_filter('plugins_url', 'hale_components_reformat_plugin_urls', 10, 3);
-    
-    // Recall plugins_url with the reformatted path.
-    $reformatted_url = plugins_url($path, $plugin_reformatted);
-    
-    // Restore the filter, following the previous removal.
-    add_filter('plugins_url', 'hale_components_reformat_plugin_urls', 10, 3);
 
+    try {
+        // Recall plugins_url with the reformatted path.
+        $reformatted_url = plugins_url($path, $plugin_reformatted);
+    } finally {
+        // Restore the filter, following the previous removal.
+        add_filter('plugins_url', 'hale_components_reformat_plugin_urls', 10, 3);
+    }
     return $reformatted_url;
 }
