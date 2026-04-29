@@ -17,10 +17,15 @@ function hc_network_dashboard_enqueue() {
         // Get the file modification time for cache busting
         $file_version = filemtime( plugin_dir_path( __FILE__ ) . $css_file );
 
+        $file_for_plugins_url = __FILE__;
+
+        // On local, if $file starts with the dev mount path, then replace with WP_CONTENT_DIR.
+        if (getenv('ENV_TYPE') === 'local' && str_starts_with($file_for_plugins_url, '/mnt/dev/')) {
+            $file_for_plugins_url = str_replace('/mnt/dev', WP_CONTENT_DIR, $file_for_plugins_url);
+        }
         // Register and enqueue the style with the cache-busted version
         wp_register_style(
             'network_dashboard',
-            plugins_url( $css_file, __FILE__ ) . '?v=' . $file_version, // Append version for cache busting
             array(), // Dependencies (empty array means no dependencies)
             null, // No need for a version since we're using filemtime for cache busting
             'all' // Media (all for all devices)

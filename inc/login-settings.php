@@ -24,8 +24,14 @@ function hale_custom_login_message() {
 add_action('login_message', 'hale_custom_login_message');
 
 function hale_login_head() {
+    $file_for_plugins_url = __FILE__;
 
-    wp_register_style('custom_loginstyle', plugins_url('../dist/css/login.css', __FILE__));
+    // On local, if $file starts with the dev mount path, then replace with WP_CONTENT_DIR.
+    if (getenv('ENV_TYPE') === 'local' && str_starts_with($file_for_plugins_url, '/mnt/dev/')) {
+        $file_for_plugins_url = str_replace('/mnt/dev', WP_CONTENT_DIR, $file_for_plugins_url);
+    }
+
+    wp_register_style('custom_loginstyle', plugins_url('../dist/css/login.css', $file_for_plugins_url));
     wp_enqueue_style("custom_loginstyle");
 }
 add_action('login_head', 'hale_login_head'); 
