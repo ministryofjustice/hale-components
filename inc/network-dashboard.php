@@ -23,9 +23,11 @@ function hc_network_dashboard_enqueue() {
         if (getenv('ENV_TYPE') === 'local' && str_starts_with($file_for_plugins_url, '/mnt/dev/')) {
             $file_for_plugins_url = str_replace('/mnt/dev', WP_CONTENT_DIR, $file_for_plugins_url);
         }
+
         // Register and enqueue the style with the cache-busted version
         wp_register_style(
             'network_dashboard',
+            plugins_url( $css_file, $file_for_plugins_url ) . '?v=' . $file_version, // Append version for cache busting
             array(), // Dependencies (empty array means no dependencies)
             null, // No need for a version since we're using filemtime for cache busting
             'all' // Media (all for all devices)
