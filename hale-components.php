@@ -21,7 +21,6 @@ include 'inc/site-user-reports.php';
 include 'inc/blocks.php';
 include 'inc/comments.php';
 include 'inc/cloudfront.php';
-include 'inc/symlink.php';
 
 
 // Only include the network dashboard if this is a multisite setup

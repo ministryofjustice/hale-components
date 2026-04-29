@@ -74,6 +74,11 @@ class Helper
      */
     public function assetPath($path)
     {
+        // On local, if $path starts with the dev mount path, then replace with WP_CONTENT_DIR.
+        if (getenv('ENV_TYPE') === 'local' && str_starts_with($path, '/mnt/dev/')) {
+            $path = str_replace('/mnt/dev', WP_CONTENT_DIR, $path);
+        }
+
         return esc_url(plugins_url('assets/', $path));
     }
 
