@@ -1,5 +1,6 @@
 <?php
 
+defined('ABSPATH') || exit;
 /**
  * Replace symlink mount path (/mnt/dev/) with target path (/var/www/html/wp-content/).
  *
