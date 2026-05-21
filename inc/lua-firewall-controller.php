@@ -228,7 +228,14 @@ function hc_firewall_handle_update_list(): void {
     $list_array          = explode(',', $list_csv);
     $list_array_trimmed  = array_map('trim', $list_array);
     $list_array_filtered = array_filter($list_array_trimmed);
-    $payload             = json_encode(array_values($list_array_filtered));
+    $list_values         = array_values($list_array_filtered);
+    $payload             = wp_json_encode($list_values);
+
+    if (false === $payload) {
+        set_transient('hc_firewall_' . $list_name . '_error_' . get_current_user_id(), __('Failed to encode the firewall list as JSON.', 'hale-components'), 60);
+        wp_safe_redirect(wp_get_referer());
+        exit;
+    }
 
     // Validate with nginx before writing — same endpoint the admin form uses.
     $nginx_url = rtrim(getenv('NGINX_INTERNAL_URL') ?: 'https://nginx', '/');
