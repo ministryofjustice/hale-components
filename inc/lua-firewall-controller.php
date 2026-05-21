@@ -138,7 +138,7 @@ function hc_firewall_handle_update_mode(): void {
     $payload        = wp_json_encode($config);
 
     // Validate with nginx before writing — same endpoint the admin form uses.
-    $nginx_url = rtrim(getenv('NGINX_INTERNAL_URL') ?: 'https://nginx', '/');
+    $nginx_url = rtrim(getenv('NGINX_INTERNAL_URL') ?: 'http://127.0.0.1:8080', '/');
     $response  = wp_remote_post(
         $nginx_url . '/firewall/admin/validate?kind=config',
         [
@@ -238,7 +238,7 @@ function hc_firewall_handle_update_list(): void {
     }
 
     // Validate with nginx before writing — same endpoint the admin form uses.
-    $nginx_url = rtrim(getenv('NGINX_INTERNAL_URL') ?: 'https://nginx', '/');
+    $nginx_url = rtrim(getenv('NGINX_INTERNAL_URL') ?: 'http://127.0.0.1:8080', '/');
     $response  = wp_remote_post(
         $nginx_url . '/firewall/admin/validate?kind=' . $list_name,
         [
@@ -317,7 +317,7 @@ function hc_firewall_handle_update_rules(): void {
     $payload = wp_unslash($_POST['firewall_rules'] ?? '');
 
     // Validate with nginx before writing — same endpoint the admin form uses.
-    $nginx_url = rtrim(getenv('NGINX_INTERNAL_URL') ?: 'https://nginx', '/');
+    $nginx_url = rtrim(getenv('NGINX_INTERNAL_URL') ?: 'http://127.0.0.1:8080', '/');
     $response  = wp_remote_post(
         $nginx_url . '/firewall/admin/validate?kind=rules',
         [
