@@ -25,7 +25,8 @@ include 'inc/cloudfront.php';
 
 // Only include the network dashboard if this is a multisite setup
 if (is_multisite()) {
-    include 'inc/network-dashboard.php'; 
+    include 'inc/lua-firewall-controller.php';
+    include 'inc/network-dashboard.php';
 	include 'inc/register-rest-api-routes.php';
     include 'inc/clean-up-users.php'; 
     include 'inc/network-user-reports.php'; 
