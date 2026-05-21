@@ -102,6 +102,8 @@ if ($hc_firewall_rules_success)     { delete_transient('hc_firewall_rules_succes
                         <?php $allowlist = hc_firewall_get_allowlist(); ?>
                         <?php if(is_array($allowlist)) : ?>
                             <form class="hc-dashboard-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                <h4>Manual allowlist</h4>
+                                <p>Comma separated IPs or IP ranges in CIDR format.</p>
                                 <input type="hidden" name="action" value="hc_firewall_update_list">
                                 <input type="hidden" name="list_name" value="allowlist">
                                 <?php wp_nonce_field('hc_firewall_update_list'); ?>
@@ -123,6 +125,8 @@ if ($hc_firewall_rules_success)     { delete_transient('hc_firewall_rules_succes
                         <?php $blocklist = hc_firewall_get_blocklist(); ?>
                         <?php if(is_array($blocklist)) : ?>
                             <form class="hc-dashboard-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                <h4>Manual blocklist</h4>
+                                <p>Comma separated IPs or IP ranges in CIDR format.</p>
                                 <input type="hidden" name="action" value="hc_firewall_update_list">
                                 <input type="hidden" name="list_name" value="blocklist">
                                 <?php wp_nonce_field('hc_firewall_update_list'); ?>
@@ -142,6 +146,8 @@ if ($hc_firewall_rules_success)     { delete_transient('hc_firewall_rules_succes
                         <?php endif; ?>
 
                         <form class="hc-dashboard-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                            <h4>Rules</h4>
+                            <p>JSON formatted cost rules (advanced)</p>
                             <input type="hidden" name="action" value="hc_firewall_update_rules">
                             <?php wp_nonce_field('hc_firewall_update_rules'); ?>
                             <textarea name="firewall_rules"  rows="12"><?php echo esc_textarea(hc_firewall_get_rules()); ?></textarea>
