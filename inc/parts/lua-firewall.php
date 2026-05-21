@@ -15,7 +15,6 @@ function hc_is_firewall_enabled() {
 // --- Status checks ---------------------------------------------------------
 $hc_firewall_enabled      = hc_is_firewall_enabled();
 $hc_firewall_redis_connected = hc_firewall_redis_ping(); // true | error string
-$hc_firewall_config_mode  = hc_firewall_get_mode();     // ['key'=>..., 'label'=>...]
 
 // --- Human-readable status strings for the UI -----------------------------
 $hc_firewall_enabled_message = $hc_firewall_enabled
@@ -64,6 +63,7 @@ if ($hc_firewall_rules_success)     { delete_transient('hc_firewall_rules_succes
                     <h4><?php _e( 'Manage the Lua Firewall', 'hale-components' ); ?></h4>
 
                     <?php if ($hc_firewall_redis_connected === true) : ?>
+                        
 
                         <?php if ($hc_firewall_mode_success) : ?>
                             <p class="hc-status-on"><?php _e('Mode updated successfully.', 'hale-components'); ?></p>
@@ -76,6 +76,7 @@ if ($hc_firewall_rules_success)     { delete_transient('hc_firewall_rules_succes
                             <input type="hidden" name="action" value="hc_firewall_update_mode">
                             <?php wp_nonce_field('hc_firewall_update_mode'); ?>
                             <select name="firewall_mode">
+                                <?php $hc_firewall_config_mode  = hc_firewall_get_mode(); // ['key'=>..., 'label'=>...] ?>
                                 <?php foreach(hc_firewall_get_all_modes() as $key => $value ) : ?>
                                     <option
                                         value="<?= esc_attr($key) ?>"
@@ -104,7 +105,7 @@ if ($hc_firewall_rules_success)     { delete_transient('hc_firewall_rules_succes
                                 <input type="hidden" name="action" value="hc_firewall_update_list">
                                 <input type="hidden" name="list_name" value="allowlist">
                                 <?php wp_nonce_field('hc_firewall_update_list'); ?>
-                                <textarea name="firewall_allowlist" rows="3"><?= implode(', ', $allowlist); ?></textarea>
+                                <textarea name="firewall_allowlist" rows="3"><?= esc_textarea(implode(', ', $allowlist)); ?></textarea>
                                 <button type="submit" class="button button-primary">
                                     <?php _e('Update allowlist', 'hale-components'); ?>
                                 </button>
@@ -125,7 +126,7 @@ if ($hc_firewall_rules_success)     { delete_transient('hc_firewall_rules_succes
                                 <input type="hidden" name="action" value="hc_firewall_update_list">
                                 <input type="hidden" name="list_name" value="blocklist">
                                 <?php wp_nonce_field('hc_firewall_update_list'); ?>
-                                <textarea name="firewall_blocklist" rows="3"><?= implode(', ', $blocklist); ?></textarea>
+                                <textarea name="firewall_blocklist" rows="3"><?= esc_textarea(implode(', ', $blocklist)); ?></textarea>
                                 <button type="submit" class="button button-primary">
                                     <?php _e('Update blocklist', 'hale-components'); ?>
                                 </button>
@@ -143,7 +144,7 @@ if ($hc_firewall_rules_success)     { delete_transient('hc_firewall_rules_succes
                         <form class="hc-dashboard-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                             <input type="hidden" name="action" value="hc_firewall_update_rules">
                             <?php wp_nonce_field('hc_firewall_update_rules'); ?>
-                            <textarea name="firewall_rules"  rows="12"><?php echo hc_firewall_get_rules(); ?></textarea>
+                            <textarea name="firewall_rules"  rows="12"><?php echo esc_textarea(hc_firewall_get_rules()); ?></textarea>
                             <button type="submit" class="button button-primary">
                                 <?php _e('Update rules', 'hale-components'); ?>
                             </button>

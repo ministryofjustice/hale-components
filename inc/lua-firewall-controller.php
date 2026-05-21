@@ -35,7 +35,8 @@ function hc_firewall_redis_connect(): \Redis {
 function hc_firewall_redis_ping(): bool|string {
     try {
         $redis = hc_firewall_redis_connect();
-        return $redis->ping() === true || $redis->ping() === '+PONG';
+        $pong = $redis->ping();
+        return $pong === true || $pong === '+PONG';
     } catch (\RedisException $e) {
         return $e->getMessage();
     }
@@ -128,11 +129,12 @@ function hc_firewall_handle_update_mode(): void {
         wp_die(__('Invalid firewall mode.', 'hale-components'));
     }
 
-    // Read current config, overlay the new mode.
-    $config_string = hc_firewall_redis_get('firewall:config');
-    $config        = $config_string ? json_decode($config_string, true) : [];
-    $config['mode'] = $new_mode;
-    $payload = wp_json_encode($config);
+    // Read current config as an object so empty {} values survive re-encoding,
+    // then overlay the new mode before sending to nginx for validation.
+    $config_string  = hc_firewall_redis_get('firewall:config');
+    $config         = $config_string ? json_decode($config_string) : new \stdClass();
+    $config->mode   = $new_mode;
+    $payload        = wp_json_encode($config);
 
     // Validate with nginx before writing — same endpoint the admin form uses.
     $nginx_url = rtrim(getenv('NGINX_INTERNAL_URL') ?: 'https://nginx', '/');
@@ -141,7 +143,7 @@ function hc_firewall_handle_update_mode(): void {
         [
             'body'      => $payload,
             'headers'   => ['Content-Type' => 'application/json'],
-            'sslverify' => false, // self-signed cert in local
+            'sslverify' => $nginx_url !== 'https://nginx', // self-signed cert in local
             'timeout'   => 5,
         ]
     );
@@ -184,7 +186,7 @@ add_action('admin_post_hc_firewall_update_mode', 'hc_firewall_handle_update_mode
 function hc_firewall_get_allowlist(): array|false {
     $allowlist_string = hc_firewall_redis_get('firewall:allowlist');
     $allowlist        = $allowlist_string ? json_decode($allowlist_string, true) : [];
-    return array_map('esc_attr', $allowlist);
+    return $allowlist;
 }
 
 /**
@@ -194,7 +196,7 @@ function hc_firewall_get_allowlist(): array|false {
 function hc_firewall_get_blocklist(): array|false {
     $blocklist_string = hc_firewall_redis_get('firewall:blocklist');
     $blocklist        = $blocklist_string ? json_decode($blocklist_string, true) : [];
-    return array_map('esc_attr', $blocklist);
+    return $blocklist;
 }
 
 /**
@@ -214,7 +216,7 @@ function hc_firewall_handle_update_list(): void {
         wp_die(__('You do not have permission to do this.', 'hale-components'));
     }
 
-    $list_name = $_POST['list_name'];
+    $list_name = sanitize_key($_POST['list_name'] ?? '');
     if(!in_array($list_name, ['allowlist', 'blocklist'])) {
         wp_die(__('Invalid list_name, must be allowlist or blocklist.', 'hale-components'));
     }
@@ -234,7 +236,7 @@ function hc_firewall_handle_update_list(): void {
         [
             'body'      => $payload,
             'headers'   => ['Content-Type' => 'application/json'],
-            'sslverify' => false, // self-signed cert in local
+            'sslverify' => $nginx_url !== 'https://nginx', // self-signed cert in local
             'timeout'   => 5,
         ]
     );
@@ -313,7 +315,7 @@ function hc_firewall_handle_update_rules(): void {
         [
             'body'      => $payload,
             'headers'   => ['Content-Type' => 'application/json'],
-            'sslverify' => false, // self-signed cert in local
+            'sslverify' => $nginx_url !== 'https://nginx', // self-signed cert in local
             'timeout'   => 5,
         ]
     );
