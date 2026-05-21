@@ -90,7 +90,7 @@ function hc_firewall_get_mode(): array|false {
     $allowed_modes = hc_firewall_get_all_modes();
 
     $config_string = hc_firewall_redis_get('firewall:config');
-    $config        = $config_string ? json_decode($config_string, true) : [];
+    $config        = ($config_string ? json_decode($config_string, true) : null) ?? [];
 
     $mode_from_config = $config['mode'] ?? 'monitor';
 
@@ -131,8 +131,9 @@ function hc_firewall_handle_update_mode(): void {
 
     // Read current config as an object so empty {} values survive re-encoding,
     // then overlay the new mode before sending to nginx for validation.
+    // Fall back to an empty object if the key is missing or the stored JSON is corrupt.
     $config_string  = hc_firewall_redis_get('firewall:config');
-    $config         = $config_string ? json_decode($config_string) : new \stdClass();
+    $config         = ($config_string ? json_decode($config_string) : null) ?? new \stdClass();
     $config->mode   = $new_mode;
     $payload        = wp_json_encode($config);
 
@@ -186,7 +187,7 @@ add_action('admin_post_hc_firewall_update_mode', 'hc_firewall_handle_update_mode
 function hc_firewall_get_allowlist(): array|false {
     $allowlist_string = hc_firewall_redis_get('firewall:allowlist');
     $allowlist        = $allowlist_string ? json_decode($allowlist_string, true) : [];
-    return $allowlist;
+    return is_array($allowlist) ? $allowlist : false;
 }
 
 /**
@@ -196,7 +197,7 @@ function hc_firewall_get_allowlist(): array|false {
 function hc_firewall_get_blocklist(): array|false {
     $blocklist_string = hc_firewall_redis_get('firewall:blocklist');
     $blocklist        = $blocklist_string ? json_decode($blocklist_string, true) : [];
-    return $blocklist;
+    return is_array($blocklist) ? $blocklist : false;
 }
 
 /**
