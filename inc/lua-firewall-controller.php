@@ -12,6 +12,9 @@ function hc_firewall_redis_connect(): \Redis {
     $port = (int) (getenv('REDIS_PORT') ?: 6379);
     $auth = getenv('REDIS_AUTH') ?: null;
     $ssl  = getenv('REDIS_SSL') !== 'false';
+    if (!class_exists(\Redis::class)) {
+        throw new \RuntimeException('PHP Redis extension (phpredis) is not installed.');
+    }
 
     $redis = new \Redis();
 
@@ -37,7 +40,7 @@ function hc_firewall_redis_ping(): bool|string {
         $redis = hc_firewall_redis_connect();
         $pong = $redis->ping();
         return $pong === true || $pong === '+PONG';
-    } catch (\RedisException $e) {
+    } catch (\Throwable $e) {
         return $e->getMessage();
     }
 }
@@ -314,7 +317,7 @@ function hc_firewall_get_rules(): string|false {
     if (!is_object($rules)) {
         $rules = new \stdClass();
     }
-    return json_encode($rules, JSON_PRETTY_PRINT);
+    return wp_json_encode($rules, JSON_PRETTY_PRINT) ?: '{}';
 }
 
 
@@ -524,8 +527,9 @@ function hc_firewall_get_active_blocks(): array {
             $ip     = substr($key, strlen('firewall:block:'));
 
             // Skip keys with unexpected values.
-            if ($value === false || !filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            if ($value === false || !in_array($value, ['gcra', '1'], true) || !filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
                 continue;
+            }
             }
 
             $blocks[] = [
