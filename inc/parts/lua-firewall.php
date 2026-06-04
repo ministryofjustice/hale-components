@@ -72,15 +72,28 @@ if ($hc_firewall_rules_success)     { delete_transient('hc_firewall_rules_succes
                             <p class="hc-status-off"><?php echo esc_html($hc_firewall_mode_error); ?></p>
                         <?php endif; ?>
 
+                        <?php
+                            // hc_firewall_get_mode() returns false if Redis has an unexpected value;
+                            // fall back to 'monitor' so the dropdown still renders sensibly, but
+                            // surface the corruption as an admin notice above the form so it can
+                            // be repaired.
+                            $hc_firewall_config_mode = hc_firewall_get_mode();
+                            $hc_current_mode_key     = is_array($hc_firewall_config_mode) ? $hc_firewall_config_mode['key'] : 'monitor';
+                        ?>
+                        <?php if ($hc_firewall_config_mode === false) : ?>
+                            <p class="hc-status-off">
+                                <?php _e('Warning: the stored firewall mode in Redis is invalid or missing. Defaulting to "Monitor". Pick a mode below and click Update mode to repair it.', 'hale-components'); ?>
+                            </p>
+                        <?php endif; ?>
+
                         <form class="hc-dashboard-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                             <input type="hidden" name="action" value="hc_firewall_update_mode">
                             <?php wp_nonce_field('hc_firewall_update_mode'); ?>
                             <select name="firewall_mode">
-                                <?php $hc_firewall_config_mode  = hc_firewall_get_mode(); // ['key'=>..., 'label'=>...] ?>
                                 <?php foreach(hc_firewall_get_all_modes() as $key => $value ) : ?>
                                     <option
                                         value="<?= esc_attr($key) ?>"
-                                        <?= $key === $hc_firewall_config_mode['key'] ? 'selected' : '' ?>
+                                        <?= $key === $hc_current_mode_key ? 'selected' : '' ?>
                                     >
                                         <?= esc_html($value) ?>
                                     </option>
