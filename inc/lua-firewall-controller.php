@@ -314,7 +314,10 @@ add_action('admin_post_hc_firewall_update_list', 'hc_firewall_handle_update_list
 function hc_firewall_get_rules(): string|false {
     $rules_string = hc_firewall_redis_get('firewall:rules');
     $rules        = $rules_string ? json_decode($rules_string) : null;
-    if (!is_object($rules)) {
+    // Accept either a JSON object ({}) or array ([...]). Anything else
+    // (null/scalar/garbage) falls back to an empty object so the textarea
+    // still renders.
+    if (!is_object($rules) && !is_array($rules)) {
         $rules = new \stdClass();
     }
     return wp_json_encode($rules, JSON_PRETTY_PRINT) ?: '{}';
@@ -529,7 +532,6 @@ function hc_firewall_get_active_blocks(): array {
             // Skip keys with unexpected values.
             if ($value === false || !in_array($value, ['gcra', '1'], true) || !filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
                 continue;
-            }
             }
 
             $blocks[] = [
