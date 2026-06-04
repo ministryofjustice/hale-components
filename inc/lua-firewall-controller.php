@@ -317,7 +317,7 @@ function hc_firewall_get_rules(): string|false {
     if (!is_object($rules)) {
         $rules = new \stdClass();
     }
-    return json_encode($rules, JSON_PRETTY_PRINT);
+    return wp_json_encode($rules, JSON_PRETTY_PRINT) ?: '{}';
 }
 
 
