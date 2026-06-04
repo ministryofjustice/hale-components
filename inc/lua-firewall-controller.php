@@ -627,3 +627,46 @@ function hc_firewall_get_audit_entries(string $ip, int $max_matches = 100, int $
         return [];
     }
 }
+
+
+/**
+ * WP-CLI commands for the Lua firewall.
+ *
+ * Registered only when running under WP-CLI so the class definition has no
+ * cost on normal web requests.
+ *
+ * Usage:
+ *   wp lua-firewall mode <off|monitor|enforce>
+ */
+if (defined('WP_CLI') && WP_CLI) {
+    class HC_Firewall_CLI {
+        /**
+         * Sets the firewall mode.
+         *
+         * Re-uses the same validate -> write -> version-bump path as the
+         * network admin UI, so all nginx pods pick up the change within ~1 s.
+         *
+         * ## OPTIONS
+         *
+         * <mode>
+         * : The new mode. One of: off, monitor, enforce.
+         *
+         * ## EXAMPLES
+         *
+         *     wp lua-firewall mode off
+         *     wp lua-firewall mode monitor
+         *     wp lua-firewall mode enforce
+         *
+         * @when after_wp_load
+         */
+        public function mode($args) {
+            [$new_mode] = $args;
+            $result = hc_firewall_update_mode($new_mode);
+            if (is_wp_error($result)) {
+                \WP_CLI::error($result->get_error_message());
+            }
+            \WP_CLI::success("Firewall mode set to {$new_mode}.");
+        }
+    }
+    \WP_CLI::add_command('lua-firewall', 'HC_Firewall_CLI');
+}
