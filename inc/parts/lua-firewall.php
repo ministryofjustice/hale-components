@@ -158,6 +158,232 @@ if ($hc_firewall_rules_success)     { delete_transient('hc_firewall_rules_succes
 
                     <?php endif; ?>
                 </div>
+                <div class="hc-dashboard-wide">
+                    <?php if ($hc_firewall_redis_connected === true) : ?>
+                        <?php
+                            $hc_active_blocks    = hc_firewall_get_active_blocks();
+                            $hc_current_mode     = hc_firewall_get_mode();
+                            $hc_is_monitor_mode  = $hc_current_mode && $hc_current_mode['key'] === 'monitor';                $hc_page_slug        = 'hale-components-network-dashboard';
+                            $hc_base_url         = network_admin_url('settings.php?page=' . $hc_page_slug);
+                            $hc_audit_ip         = isset($_GET['audit_ip'])
+                                ? (filter_var(wp_unslash($_GET['audit_ip']), FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) ?: null)
+                                : null;            ?>
+                        <?php
+                            $hc_clear_penalties_error   = get_transient('hc_firewall_clear_penalties_error_'   . get_current_user_id());
+                            $hc_clear_penalties_success = get_transient('hc_firewall_clear_penalties_success_' . get_current_user_id());
+                            if ($hc_clear_penalties_error)   { delete_transient('hc_firewall_clear_penalties_error_'   . get_current_user_id()); }
+                            if ($hc_clear_penalties_success) { delete_transient('hc_firewall_clear_penalties_success_' . get_current_user_id()); }
+                        ?>
+                        <h4><?php
+                            if ($hc_is_monitor_mode) {
+                                _e('IPs That Would Be Blocked (Monitor Mode)', 'hale-components');
+                            } else {
+                                _e('Currently Blocked IPs', 'hale-components');
+                            }
+                        ?></h4>
+                        <?php if ($hc_clear_penalties_success) : ?>
+                            <p class="hc-status-on"><?php echo esc_html(
+                                is_string($hc_clear_penalties_success)
+                                    ? $hc_clear_penalties_success
+                                    : __('All auto-bans cleared.', 'hale-components')
+                            ); ?></p>
+                        <?php endif; ?>
+                        <?php if ($hc_clear_penalties_error) : ?>
+                            <p class="hc-status-off"><?php echo esc_html($hc_clear_penalties_error); ?></p>
+                        <?php endif; ?>
+                        <?php if ($hc_is_monitor_mode) : ?>
+                            <p><em><?php _e('Firewall is in monitor mode — these IPs are being tracked but not blocked.', 'hale-components'); ?></em></p>
+                        <?php endif; ?>
+                        <?php
+                            $hc_has_auto_bans = !empty(array_filter($hc_active_blocks, fn($b) => $b['type'] === 'auto'));
+                        ?>
+                        <?php if ($hc_has_auto_bans) : ?>
+                            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-bottom:1em">
+                                <input type="hidden" name="action" value="hc_firewall_clear_penalties">
+                                <?php wp_nonce_field('hc_firewall_clear_penalties'); ?>
+                                <button type="submit" class="button" onclick="return confirm('<?php esc_attr_e('Clear all auto-bans? Manual bans will not be affected.', 'hale-components'); ?>')">
+                                    <?php _e('Clear all auto-bans', 'hale-components'); ?>
+                                </button>
+                            </form>
+                        <?php endif; ?>
+                        <?php if (empty($hc_active_blocks)) : ?>
+                            <p><?php
+                                if ($hc_is_monitor_mode) {
+                                    _e('No IPs would currently be blocked.', 'hale-components');
+                                } else {
+                                    _e('No IPs are currently blocked.', 'hale-components');
+                                }
+                            ?></p>
+                        <?php else : ?>
+                            <table class="widefat striped">
+                                <thead>
+                                    <tr>
+                                        <th><?php _e('IP Address', 'hale-components'); ?></th>
+                                        <th><?php _e('Ban Type', 'hale-components'); ?></th>
+                                        <th><?php _e('Expires', 'hale-components'); ?></th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($hc_active_blocks as $block) : ?>
+                                        <tr>
+                                            <td><?php echo esc_html($block['ip']); ?></td>
+                                            <td><?php
+                                                if ($block['type'] === 'auto') {
+                                                    echo $hc_is_monitor_mode
+                                                        ? __('Auto (GCRA) — would block', 'hale-components')
+                                                        : __('Auto (GCRA)', 'hale-components');
+                                                } else {
+                                                    echo __('Manual', 'hale-components');
+                                                }
+                                            ?></td>
+                                            <td><?php
+                                                if ($block['ttl_ms'] < 0) {
+                                                    _e('Never', 'hale-components');
+                                                } else {
+                                                    $secs = (int) ceil($block['ttl_ms'] / 1000);
+                                                    if ($secs < 60) {
+                                                        echo esc_html(sprintf(_n('%d second', '%d seconds', $secs, 'hale-components'), $secs));
+                                                    } elseif ($secs < 3600) {
+                                                        $mins = (int) ceil($secs / 60);
+                                                        echo esc_html(sprintf(_n('%d minute', '%d minutes', $mins, 'hale-components'), $mins));
+                                                    } else {
+                                                        $hours = (int) ceil($secs / 3600);
+                                                        echo esc_html(sprintf(_n('%d hour', '%d hours', $hours, 'hale-components'), $hours));
+                                                    }
+                                                }
+                                            ?></td>
+                                            <td>
+                                                <?php
+                                                    $hc_is_viewing = $hc_audit_ip === $block['ip'];
+                                                    $hc_show_audit_url = esc_url(add_query_arg('audit_ip', $block['ip'], $hc_base_url));
+                                                    $hc_hide_audit_url = esc_url(remove_query_arg('audit_ip', $hc_base_url));
+                                                ?>
+                                                <?php if ($hc_is_viewing): ?>
+                                                    <a href="<?php echo $hc_hide_audit_url; ?>" class="button button-small">
+                                                        <?= __('Hide Audit', 'hale-components') ?>
+                                                    </a>
+                                                <?php else: ?>
+                                                    <a href="<?php echo $hc_show_audit_url; ?>" class="button button-small">
+                                                        <?= __('View Audit', 'hale-components') ?>
+                                                    </a>
+                                                <?php endif; ?>
+                                                <?php if ($block['type'] === 'auto') : ?>
+                                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline">
+                                                        <input type="hidden" name="action" value="hc_firewall_clear_penalty_ip">
+                                                        <input type="hidden" name="ip" value="<?php echo esc_attr($block['ip']); ?>">
+                                                        <?php wp_nonce_field('hc_firewall_clear_penalty_ip'); ?>
+                                                        <button type="submit" class="button button-small" onclick="return confirm('<?php echo esc_attr(sprintf(__('Unblock %s?', 'hale-components'), $block['ip'])); ?>')">
+                                                            <?php _e('Unblock', 'hale-components'); ?>
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
+
+                        <?php if ($hc_audit_ip !== null) : ?>
+                            <?php
+                                $hc_audit_entries   = hc_firewall_get_audit_entries($hc_audit_ip);
+                                $hc_audit_truncated = count($hc_audit_entries) === 0 && true; // may be empty or truncated
+                            ?>
+                        <?php endif; ?>
+
+                        <h4><?php _e('Audit History Lookup', 'hale-components'); ?></h4>
+                        <form method="get" action="">
+                            <?php
+                                // Preserve existing query params (page slug etc.) as hidden fields.
+                                foreach ($_GET as $hc_k => $hc_v) {
+                                    if ($hc_k === 'audit_ip') continue;
+                                    echo '<input type="hidden" name="' . esc_attr($hc_k) . '" value="' . esc_attr($hc_v) . '">';
+                                }
+                            ?>
+                            <input
+                                type="text"
+                                name="audit_ip"
+                                value="<?php echo esc_attr($hc_audit_ip ?? ''); ?>"
+                                placeholder="<?php esc_attr_e('e.g. 1.2.3.4', 'hale-components'); ?>"
+                                pattern="^(\d{1,3}\.){3}\d{1,3}$"
+                                style="width:180px"
+                            >
+                            <button type="submit" class="button"><?php _e('Look up', 'hale-components'); ?></button>
+                            <?php if ($hc_audit_ip !== null) : ?>
+                                <a href="<?php echo esc_url(remove_query_arg('audit_ip')); ?>" class="button"><?php _e('Clear', 'hale-components'); ?></a>
+                            <?php endif; ?>
+                        </form>
+
+                        <?php if ($hc_audit_ip !== null) : ?>
+                            <h4><?php echo esc_html(sprintf(__('Audit History: %s', 'hale-components'), $hc_audit_ip)); ?></h4>
+                            <p><em><?php _e('One entry is recorded per block episode — not per request. When an IP is blocked, all further requests within the cooldown window are rejected without a new audit entry. Each row below marks the start of a new block window after the previous cooldown expired.', 'hale-components'); ?></em></p>
+                            <p><em><?php _e('Older entries may have been rotated out of the capped stream.', 'hale-components'); ?></em></p>
+                            <?php if (empty($hc_audit_entries)) : ?>
+                                <p><?php _e('No audit entries found for this IP.', 'hale-components'); ?></p>
+                            <?php else : ?>
+                                <table class="widefat striped">
+                                    <thead>
+                                        <tr>
+                                            <th><?php _e('Time', 'hale-components'); ?></th>
+                                            <th><?php _e('Mode', 'hale-components'); ?></th>
+                                            <th><?php _e('Reason', 'hale-components'); ?></th>
+                                            <th><?php _e('Block Trigger', 'hale-components'); ?></th>
+                                            <th><?php _e('Previous Hits', 'hale-components'); ?></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($hc_audit_entries as $entry) : ?>
+                                            <tr>
+                                                <td><?php echo esc_html(
+                                                    $entry['blocked_at']
+                                                        ? wp_date('Y-m-d H:i:s', (int) ($entry['blocked_at'] / 1000))
+                                                        : '—'
+                                                ); ?></td>
+                                                <td><?php echo esc_html($entry['mode']); ?></td>
+                                                <td><?php echo esc_html($entry['reason'] ?: '—'); ?></td>
+                                                <td><?php
+                                                    $hc_trigger = $entry['trigger'];
+                                                    if (in_array($hc_trigger, ['ip-block', 'penalty'], true)) {
+                                                        echo esc_html($hc_trigger);
+                                                    } else {
+                                                        $hc_parts = array_map('trim', explode(',', $hc_trigger));
+                                                        $hc_lines = [];
+                                                        foreach ($hc_parts as $hc_part) {
+                                                            // rule:req-score:name:cost  or  rule:res-score:name:cost
+                                                            $hc_clean = preg_replace('/^rule:(?:req|res)-score:/', '', $hc_part);
+                                                            // hc_clean is now  name:cost
+                                                            $hc_colon = strrpos($hc_clean, ':');
+                                                            if ($hc_colon !== false) {
+                                                                $hc_name  = substr($hc_clean, 0, $hc_colon);
+                                                                $hc_cost  = substr($hc_clean, $hc_colon + 1);
+                                                                $hc_lines[] = esc_html($hc_name) . ' <small>(+' . esc_html($hc_cost) . ')</small>';
+                                                            } else {
+                                                                $hc_lines[] = esc_html($hc_clean);
+                                                            }
+                                                        }
+                                                        echo implode('<br>', $hc_lines);
+                                                    }
+                                                ?></td>
+                                                <td><?php
+                                                    if (empty($entry['accumulated'])) {
+                                                        echo '—';
+                                                    } else {
+                                                        $parts = [];
+                                                        foreach ($entry['accumulated'] as $rule => $hits) {
+                                                            $hc_rule_clean = preg_replace('/^rule:(?:req|res)-score:/', '', $rule);
+                                                            $parts[] = esc_html($hc_rule_clean) . ': ' . (int) $hits;
+                                                        }
+                                                        echo implode('<br>', $parts);
+                                                    }
+                                                ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
-

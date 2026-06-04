@@ -353,3 +353,257 @@ function hc_firewall_handle_update_rules(): void {
     exit;
 }
 add_action('admin_post_hc_firewall_update_rules', 'hc_firewall_handle_update_rules');
+
+
+/**
+ * Handles the "clear all auto-bans" form submission.
+ *
+ * Calls GET /firewall/clear-penalties on the internal nginx endpoint, which
+ * deletes every firewall:block:{ip} key with value "gcra" and increments
+ * firewall:penalties_version so all pods flush their blocked_cache within ~1 s.
+ * Manual bans (value "1") are untouched.
+ */
+function hc_firewall_handle_clear_penalties(): void {
+    check_admin_referer('hc_firewall_clear_penalties');
+
+    if (!current_user_can('manage_network_options')) {
+        wp_die(__('You do not have permission to do this.', 'hale-components'));
+    }
+
+    $nginx_url = rtrim(getenv('NGINX_INTERNAL_URL') ?: 'http://127.0.0.1:8080', '/');
+    $response  = wp_remote_get(
+        $nginx_url . '/firewall/clear-penalties',
+        [
+            'sslverify' => $nginx_url !== 'https://nginx',
+            'timeout'   => 5,
+        ]
+    );
+
+    if (is_wp_error($response)) {
+        set_transient('hc_firewall_clear_penalties_error_' . get_current_user_id(), $response->get_error_message(), 60);
+        wp_safe_redirect(wp_get_referer());
+        exit;
+    }
+
+    $code = wp_remote_retrieve_response_code($response);
+    if ($code !== 200) {
+        set_transient('hc_firewall_clear_penalties_error_' . get_current_user_id(), sprintf(__('Unexpected response: %d', 'hale-components'), $code), 60);
+        wp_safe_redirect(wp_get_referer());
+        exit;
+    }
+
+    set_transient('hc_firewall_clear_penalties_success_' . get_current_user_id(), true, 60);
+    wp_safe_redirect(wp_get_referer());
+    exit;
+}
+add_action('admin_post_hc_firewall_clear_penalties', 'hc_firewall_handle_clear_penalties');
+
+
+/**
+ * Handles the per-row "Unblock" form submission.
+ *
+ * Calls GET /firewall/clear-penalties?ip=<ip> on the internal nginx endpoint,
+ * which deletes the firewall:block:{ip}, firewall:gcra:{ip}, and
+ * firewall:gcra:{ip}:breakdown keys (only for auto-bans) and bumps
+ * firewall:penalties_version. The nginx endpoint refuses to clear manual
+ * bans (returns 409); we surface that as an error to the admin.
+ */
+function hc_firewall_handle_clear_penalty_ip(): void {
+    check_admin_referer('hc_firewall_clear_penalty_ip');
+
+    if (!current_user_can('manage_network_options')) {
+        wp_die(__('You do not have permission to do this.', 'hale-components'));
+    }
+
+    $ip = filter_var(wp_unslash($_POST['ip'] ?? ''), FILTER_VALIDATE_IP, FILTER_FLAG_IPV4);
+    if (!$ip) {
+        set_transient('hc_firewall_clear_penalties_error_' . get_current_user_id(), __('Invalid IP address.', 'hale-components'), 60);
+        wp_safe_redirect(wp_get_referer());
+        exit;
+    }
+
+    $nginx_url = rtrim(getenv('NGINX_INTERNAL_URL') ?: 'http://127.0.0.1:8080', '/');
+    $response  = wp_remote_get(
+        $nginx_url . '/firewall/clear-penalties?ip=' . rawurlencode($ip),
+        [
+            'sslverify' => $nginx_url !== 'https://nginx',
+            'timeout'   => 5,
+        ]
+    );
+
+    if (is_wp_error($response)) {
+        set_transient('hc_firewall_clear_penalties_error_' . get_current_user_id(), $response->get_error_message(), 60);
+        wp_safe_redirect(wp_get_referer());
+        exit;
+    }
+
+    $code = wp_remote_retrieve_response_code($response);
+    if ($code === 200) {
+        set_transient('hc_firewall_clear_penalties_success_' . get_current_user_id(),
+            sprintf(__('Cleared auto-ban for %s.', 'hale-components'), $ip), 60);
+    } elseif ($code === 404) {
+        set_transient('hc_firewall_clear_penalties_error_' . get_current_user_id(),
+            sprintf(__('%s is no longer banned.', 'hale-components'), $ip), 60);
+    } elseif ($code === 409) {
+        set_transient('hc_firewall_clear_penalties_error_' . get_current_user_id(),
+            sprintf(__('%s is a manual ban — remove it from the blocklist instead.', 'hale-components'), $ip), 60);
+    } else {
+        set_transient('hc_firewall_clear_penalties_error_' . get_current_user_id(),
+            sprintf(__('Unexpected response: %d', 'hale-components'), $code), 60);
+    }
+
+    wp_safe_redirect(wp_get_referer());
+    exit;
+}
+add_action('admin_post_hc_firewall_clear_penalty_ip', 'hc_firewall_handle_clear_penalty_ip');
+
+
+/**
+ * Returns all currently active firewall blocks from Redis.
+ *
+ * Scans firewall:block:{ip} keys and fetches their value and remaining TTL in
+ * a single pipeline. Each entry in the returned array has:
+ *   - 'ip'      string  The blocked IP address.
+ *   - 'type'    string  'auto' (value "gcra") or 'manual' (value "1").
+ *   - 'ttl_ms'  int     Remaining TTL in milliseconds; -1 means no expiry.
+ *
+ * Returns an empty array if there are no active blocks or on Redis error.
+ */
+function hc_firewall_get_active_blocks(): array {
+    try {
+        $redis = hc_firewall_redis_connect();
+
+        // SCAN in batches to avoid blocking Redis with KEYS.
+        $iterator = null;
+        $keys     = [];
+        do {
+            $batch = $redis->scan($iterator, 'firewall:block:*', 100);
+            if ($batch !== false) {
+                $keys = array_merge($keys, $batch);
+            }
+        } while ($iterator !== 0);
+
+        if (empty($keys)) {
+            return [];
+        }
+
+        // Pipeline GET + PTTL for each key to minimise round-trips.
+        $redis->multi(\Redis::PIPELINE);
+        foreach ($keys as $key) {
+            $redis->get($key);
+            $redis->pttl($key);
+        }
+        $responses = $redis->exec();
+
+        $blocks = [];
+        foreach ($keys as $i => $key) {
+            $value  = $responses[$i * 2];
+            $pttl   = $responses[$i * 2 + 1];
+            $ip     = substr($key, strlen('firewall:block:'));
+
+            // Skip keys with unexpected values.
+            if ($value === false || !filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                continue;
+            }
+
+            $blocks[] = [
+                'ip'     => $ip,
+                'type'   => ($value === 'gcra') ? 'auto' : 'manual',
+                'ttl_ms' => (int) $pttl,
+            ];
+        }
+
+        // Sort by IP for a stable display order.
+        usort($blocks, fn($a, $b) => strcmp($a['ip'], $b['ip']));
+
+        return $blocks;
+    } catch (\RedisException $e) {
+        return [];
+    }
+}
+
+/**
+ * Returns audit stream entries for a specific IP address.
+ *
+ * Paginates through firewall:audit in batches (newest first) until either
+ * $max_matches entries for $ip are found or the stream is exhausted. Using
+ * batches avoids a single large xRevRange call while still reading the full
+ * stream when needed.
+ *
+ * Each entry in the returned array has:
+ *   - 'id'          string   Redis stream entry ID (timestamp-sequence).
+ *   - 'blocked_at'  int      Ms epoch when the block was recorded.
+ *   - 'cost'        int      GCRA cost charged on this request.
+ *   - 'mode'        string   'enforce' or 'monitor'.
+ *   - 'trigger'     string   Comma-separated rule identifiers.
+ *   - 'reason'      string   'gcra', 'block', 'penalty', or '' for res-phase entries.
+ *   - 'accumulated' array    Decoded per-rule hit counts, keyed by rule name.
+ *
+ * Also returns a 'truncated' boolean as the last element of the array when
+ * the stream was exhausted before $max_matches were found — callers can
+ * surface this in the UI.
+ *
+ * @param string $ip          A validated IPv4 address.
+ * @param int    $max_matches Stop after collecting this many matching entries.
+ * @param int    $batch_size  Number of stream entries to read per round-trip.
+ */
+function hc_firewall_get_audit_entries(string $ip, int $max_matches = 100, int $batch_size = 200): array {
+    try {
+        $redis   = hc_firewall_redis_connect();
+        $cursor  = '+';
+        $entries = [];
+
+        while (true) {
+            $batch = $redis->xRevRange('firewall:audit', $cursor, '-', $batch_size);
+
+            if (empty($batch)) {
+                break; // stream exhausted
+            }
+
+            foreach ($batch as $id => $fields) {
+                if (($fields['ip'] ?? '') === $ip) {
+                    $accumulated_raw = $fields['accumulated'] ?? '';
+                    $accumulated     = ($accumulated_raw !== '' && $accumulated_raw !== '""')
+                        ? json_decode($accumulated_raw, true) ?? []
+                        : [];
+
+                    $entries[] = [
+                        'id'          => $id,
+                        'blocked_at'  => (int) ($fields['blocked_at'] ?? 0),
+                        'cost'        => (int) ($fields['cost'] ?? 0),
+                        'mode'        => $fields['mode'] ?? '',
+                        'trigger'     => $fields['trigger'] ?? '',
+                        'reason'      => $fields['reason'] ?? '',
+                        'accumulated' => $accumulated,
+                    ];
+
+                    if (count($entries) >= $max_matches) {
+                        return $entries; // found enough — stop early
+                    }
+                }
+            }
+
+            // Advance cursor to just before the oldest ID in this batch.
+            // Stream IDs are "ms-seq"; decrementing the sequence by 1 gives
+            // the exclusive upper bound for the next page.
+            $last_id = array_key_last($batch);
+            [$ms, $seq] = explode('-', $last_id);
+            if ((int) $seq === 0) {
+                // Sequence is 0 — step back one millisecond to avoid an
+                // infinite loop when multiple entries share the same ms.
+                $cursor = ((int) $ms - 1) . '-' . PHP_INT_MAX;
+            } else {
+                $cursor = $ms . '-' . ((int) $seq - 1);
+            }
+
+            // If this batch was smaller than requested, we've hit the end.
+            if (count($batch) < $batch_size) {
+                break;
+            }
+        }
+
+        return $entries;
+    } catch (\RedisException $e) {
+        return [];
+    }
+}
