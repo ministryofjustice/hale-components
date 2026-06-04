@@ -132,10 +132,13 @@ function hc_firewall_handle_update_mode(): void {
     // Read current config as an object so empty {} values survive re-encoding,
     // then overlay the new mode before sending to nginx for validation.
     // Fall back to an empty object if the key is missing or the stored JSON is corrupt.
-    $config_string  = hc_firewall_redis_get('firewall:config');
-    $config         = ($config_string ? json_decode($config_string) : null) ?? new \stdClass();
-    $config->mode   = $new_mode;
-    $payload        = wp_json_encode($config);
+    $config_string = hc_firewall_redis_get('firewall:config');
+    $config        = $config_string ? json_decode($config_string) : null;
+    if (!is_object($config)) {
+        $config = new \stdClass();
+    }
+    $config->mode = $new_mode;
+    $payload      = wp_json_encode($config);
 
     // Validate with nginx before writing — same endpoint the admin form uses.
     $nginx_url = rtrim(getenv('NGINX_INTERNAL_URL') ?: 'http://127.0.0.1:8080', '/');
@@ -291,7 +294,10 @@ add_action('admin_post_hc_firewall_update_list', 'hc_firewall_handle_update_list
  */
 function hc_firewall_get_rules(): string|false {
     $rules_string = hc_firewall_redis_get('firewall:rules');
-    $rules        = $rules_string ? json_decode($rules_string) : new \stdClass();
+    $rules        = $rules_string ? json_decode($rules_string) : null;
+    if (!is_object($rules)) {
+        $rules = new \stdClass();
+    }
     return json_encode($rules, JSON_PRETTY_PRINT);
 }
 
