@@ -163,11 +163,13 @@ if ($hc_firewall_rules_success)     { delete_transient('hc_firewall_rules_succes
                         <?php
                             $hc_active_blocks    = hc_firewall_get_active_blocks();
                             $hc_current_mode     = hc_firewall_get_mode();
-                            $hc_is_monitor_mode  = $hc_current_mode && $hc_current_mode['key'] === 'monitor';                $hc_page_slug        = 'hale-components-network-dashboard';
+                            $hc_is_monitor_mode  = $hc_current_mode && $hc_current_mode['key'] === 'monitor';
+                            $hc_page_slug        = 'hale-components-network-dashboard';
                             $hc_base_url         = network_admin_url('settings.php?page=' . $hc_page_slug);
                             $hc_audit_ip         = isset($_GET['audit_ip'])
                                 ? (filter_var(wp_unslash($_GET['audit_ip']), FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) ?: null)
-                                : null;            ?>
+                                : null;
+                        ?>
                         <?php
                             $hc_clear_penalties_error   = get_transient('hc_firewall_clear_penalties_error_'   . get_current_user_id());
                             $hc_clear_penalties_success = get_transient('hc_firewall_clear_penalties_success_' . get_current_user_id());
