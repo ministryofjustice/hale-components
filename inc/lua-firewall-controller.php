@@ -527,8 +527,9 @@ function hc_firewall_get_active_blocks(): array {
             $ip     = substr($key, strlen('firewall:block:'));
 
             // Skip keys with unexpected values.
-            if ($value === false || !filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            if ($value === false || !in_array($value, ['gcra', '1'], true) || !filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
                 continue;
+            }
             }
 
             $blocks[] = [
