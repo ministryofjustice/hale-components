@@ -299,7 +299,9 @@ if ($hc_firewall_rules_success)     { delete_transient('hc_firewall_rules_succes
                             <?php
                                 // Preserve existing query params (page slug etc.) as hidden fields.
                                 foreach ($_GET as $hc_k => $hc_v) {
-                                    if ($hc_k === 'audit_ip') continue;
+                                    if ($hc_k === 'audit_ip' || is_array($hc_v)) {
+                                        continue;
+                                    }
                                     echo '<input type="hidden" name="' . esc_attr($hc_k) . '" value="' . esc_attr($hc_v) . '">';
                                 }
                             ?>

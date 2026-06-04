@@ -545,9 +545,7 @@ function hc_firewall_get_active_blocks(): array {
  *   - 'reason'      string   'gcra', 'block', 'penalty', or '' for res-phase entries.
  *   - 'accumulated' array    Decoded per-rule hit counts, keyed by rule name.
  *
- * Also returns a 'truncated' boolean as the last element of the array when
- * the stream was exhausted before $max_matches were found — callers can
- * surface this in the UI.
+ *
  *
  * @param string $ip          A validated IPv4 address.
  * @param int    $max_matches Stop after collecting this many matching entries.
