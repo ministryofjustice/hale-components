@@ -290,7 +290,6 @@ if ($hc_firewall_rules_success)     { delete_transient('hc_firewall_rules_succes
                         <?php if ($hc_audit_ip !== null) : ?>
                             <?php
                                 $hc_audit_entries   = hc_firewall_get_audit_entries($hc_audit_ip);
-                                $hc_audit_truncated = count($hc_audit_entries) === 0 && true; // may be empty or truncated
                             ?>
                         <?php endif; ?>
 
