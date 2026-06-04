@@ -105,28 +105,23 @@ function hc_firewall_get_mode(): array|false {
 }
 
 /**
- * Handles the "update firewall mode" form submission.
+ * Sets the firewall mode in Redis.
  *
- * Flow:
- *   1. Verify nonce + capability.
- *   2. Read current firewall:config from Redis.
- *   3. Swap in the new mode.
- *   4. POST the updated config to nginx /firewall/admin/validate?kind=config.
- *   5. On success write the normalised payload back to Redis and bump
- *      firewall:cache_version so all nginx pods reload within ~1 s.
+ * Reads the current firewall:config, swaps in $new_mode, validates the
+ * resulting config via nginx /firewall/admin/validate?kind=config, then
+ * writes the normalised payload back to Redis and bumps
+ * firewall:cache_version so all nginx pods reload within ~1 s.
+ *
+ * Safe to call from WP-CLI, e.g.:
+ *   wp eval 'echo is_wp_error($r = hc_firewall_update_mode("monitor")) ? $r->get_error_message() : "ok";'
+ *
+ * @param string $new_mode One of the keys returned by hc_firewall_get_all_modes().
+ * @return true|\WP_Error  true on success, WP_Error on validation/transport failure.
  */
-function hc_firewall_handle_update_mode(): void {
-    check_admin_referer('hc_firewall_update_mode');
-
-    if (!current_user_can('manage_network_options')) {
-        wp_die(__('You do not have permission to do this.', 'hale-components'));
-    }
-
-    $new_mode     = sanitize_key($_POST['firewall_mode'] ?? '');
-    $allowed      = array_keys(hc_firewall_get_all_modes());
-
+function hc_firewall_update_mode(string $new_mode): true|\WP_Error {
+    $allowed = array_keys(hc_firewall_get_all_modes());
     if (!in_array($new_mode, $allowed, true)) {
-        wp_die(__('Invalid firewall mode.', 'hale-components'));
+        return new \WP_Error('hc_firewall_invalid_mode', __('Invalid firewall mode.', 'hale-components'));
     }
 
     // Read current config as an object so empty {} values survive re-encoding,
@@ -153,18 +148,14 @@ function hc_firewall_handle_update_mode(): void {
     );
 
     if (is_wp_error($response)) {
-        set_transient('hc_firewall_mode_error_' . get_current_user_id(), $response->get_error_message(), 60);
-        wp_safe_redirect(wp_get_referer());
-        exit;
+        return $response;
     }
 
     $result = json_decode(wp_remote_retrieve_body($response));
 
     if (empty($result->ok)) {
         $errors = implode(', ', (array) ($result->errors ?? ['unknown error']));
-        set_transient('hc_firewall_mode_error_' . get_current_user_id(), $errors, 60);
-        wp_safe_redirect(wp_get_referer());
-        exit;
+        return new \WP_Error('hc_firewall_validation_failed', $errors);
     }
 
     // Write the normalised config (defaults applied, types coerced) and
@@ -172,7 +163,32 @@ function hc_firewall_handle_update_mode(): void {
     hc_firewall_redis_set('firewall:config', wp_json_encode($result->normalised));
     hc_firewall_redis_connect()->incr('firewall:cache_version');
 
-    set_transient('hc_firewall_mode_success_' . get_current_user_id(), true, 60);
+    return true;
+}
+
+/**
+ * Handles the "update firewall mode" form submission.
+ *
+ * Verifies nonce + capability, pulls the mode from $_POST, and delegates to
+ * hc_firewall_update_mode() for the actual work. Surfaces success/failure
+ * via transients so the dashboard can render an admin notice on redirect.
+ */
+function hc_firewall_handle_update_mode(): void {
+    check_admin_referer('hc_firewall_update_mode');
+
+    if (!current_user_can('manage_network_options')) {
+        wp_die(__('You do not have permission to do this.', 'hale-components'));
+    }
+
+    $new_mode = sanitize_key($_POST['firewall_mode'] ?? '');
+    $result   = hc_firewall_update_mode($new_mode);
+
+    if (is_wp_error($result)) {
+        set_transient('hc_firewall_mode_error_' . get_current_user_id(), $result->get_error_message(), 60);
+    } else {
+        set_transient('hc_firewall_mode_success_' . get_current_user_id(), true, 60);
+    }
+
     wp_safe_redirect(wp_get_referer());
     exit;
 }
