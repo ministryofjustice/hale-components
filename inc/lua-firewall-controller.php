@@ -40,7 +40,7 @@ function hc_firewall_redis_ping(): bool|string {
         $redis = hc_firewall_redis_connect();
         $pong = $redis->ping();
         return $pong === true || $pong === '+PONG';
-    } catch (\RedisException $e) {
+    } catch (\Throwable $e) {
         return $e->getMessage();
     }
 }
