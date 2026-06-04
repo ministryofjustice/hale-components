@@ -12,6 +12,9 @@ function hc_firewall_redis_connect(): \Redis {
     $port = (int) (getenv('REDIS_PORT') ?: 6379);
     $auth = getenv('REDIS_AUTH') ?: null;
     $ssl  = getenv('REDIS_SSL') !== 'false';
+    if (!class_exists(\Redis::class)) {
+        throw new \RuntimeException('PHP Redis extension (phpredis) is not installed.');
+    }
 
     $redis = new \Redis();
 
