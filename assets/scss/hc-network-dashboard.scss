@@ -27,6 +27,10 @@
           padding-left: 20px;
       }
 
+      .hc-dashboard-wide {
+          min-width: 100%;
+      }
+
       .hc-dashboard-left h4,
       .hc-dashboard-right h4 {
           margin-top: 0;
@@ -54,4 +58,12 @@
           padding: 2px 8px;
           border-radius: 4px;
           font-weight: bold;
+      }
+
+      .hc-dashboard-form {
+        margin-bottom: 25px;
+
+        textarea {
+            width: 100%;
+        }
       }

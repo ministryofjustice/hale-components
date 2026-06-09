@@ -4,7 +4,7 @@
 Plugin Name: Hale Components
 Plugin URI: https://github.com/ministryofjustice/hale-components
 Description: Functions that are commonly used across the Hale Platform.
-Version: 1.15.2
+Version: 1.15.3
 Author: Ministry of Justice
 Author URI: https://github.com/ministryofjustice
 Text Domain: hale-components
@@ -25,7 +25,8 @@ include 'inc/cloudfront.php';
 
 // Only include the network dashboard if this is a multisite setup
 if (is_multisite()) {
-    include 'inc/network-dashboard.php'; 
+    include 'inc/lua-firewall-controller.php';
+    include 'inc/network-dashboard.php';
 	include 'inc/register-rest-api-routes.php';
     include 'inc/clean-up-users.php'; 
     include 'inc/network-user-reports.php'; 
