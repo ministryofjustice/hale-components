@@ -22,6 +22,7 @@ include 'inc/blocks.php';
 include 'inc/comments.php';
 include 'inc/cloudfront.php';
 include 'inc/disable-user-api.php';
+include 'inc/pagecache-purge.php';
 
 
 // Only include the network dashboard if this is a multisite setup
