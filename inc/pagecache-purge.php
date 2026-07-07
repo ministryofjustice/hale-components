@@ -25,6 +25,9 @@ add_action('transition_post_status', 'hc_pagecache_on_transition', 10, 3);
  */
 function hc_pagecache_on_transition($new_status, $old_status, $post): void
 {
+    if ('true' !== getenv('PAGECACHE_ENABLED')) {
+        return;
+    }
     // Only act when the result is a live, publicly viewable page/post.
     if ('publish' !== $new_status) {
         return;
