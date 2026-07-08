@@ -101,7 +101,7 @@ function hc_pagecache_purge_paths(array $paths): void
         // Page cache lives in its own DB; the firewall is db0.
         $redis->select((int) (getenv('PAGECACHE_DB') ?: 1));
         $version  = (int) ($redis->get('pagecache:version') ?: 0);
-        $hostname = wp_parse_url(home_url(), PHP_URL_HOST);   // multisite: scope to this site
+        $hostname = strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST));   // multisite: scope to this site
         // Fence TTL must outlive the slowest realistic PHP render so a
         // very slow in-flight request can still be fenced out. 60s is
         // comfortably above normal render times; raise it if pages are
@@ -109,9 +109,13 @@ function hc_pagecache_purge_paths(array $paths): void
         $fenceTtl = (int) (getenv('PAGECACHE_FENCE_TTL') ?: 60);
         // Redis's own clock, not the web server's wall-clock - avoids
         // clock drift between this PHP host and the OpenResty pods.
+        // Integer microseconds: "sec.usec" concatenation would mis-order
+        // within a second (usec isn't zero-padded). Must match the
+        // snapshot format in opt/lua/pagecache/init.lua (fetch()) in
+        // the hale-platform repo.
         $time       = $redis->rawCommand('TIME');
         $fenceValue = (is_array($time) && isset($time[0]))
-            ? $time[0] . '.' . ($time[1] ?? '0')
+            ? (string) ((int) $time[0] * 1000000 + (int) ($time[1] ?? 0))
             : null;
         foreach ($paths as $path) {
             // Must match the Lua key schemes:
