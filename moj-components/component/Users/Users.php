@@ -91,7 +91,7 @@ class Users
             }
         }
 
-        if ($options['user_inactive_test']) {
+        if (!empty($options['user_inactive_test'])) {
             foreach ($this->dummyTestData() as $dummy_user) {
                 $inactive_users[] = $dummy_user;
             }
