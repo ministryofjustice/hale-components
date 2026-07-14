@@ -78,45 +78,15 @@ function hc_pagecache_purge_paths(array $paths): void
     if ('true' !== getenv('PAGECACHE_ENABLED') || empty($paths)) {
         return;
     }
-    if (! class_exists('Redis')) {
-        error_log('pagecache purge: phpredis (Redis class) not available');
+    $redis = hc_pagecache_redis_connect();
+    if (null === $redis) {
         return;
     }
     try {
-        $host = getenv('REDIS_HOST') ?: 'redis';
-        $port = (int) (getenv('REDIS_PORT') ?: 6379);
-        // ElastiCache in-transit encryption needs the tls:// scheme.
-        // Local dev sets REDIS_SSL=false.
-        if ('false' !== getenv('REDIS_SSL')) {
-            $host = 'tls://' . $host;
-        }
-        $redis = new Redis();
-        if (! $redis->connect($host, $port, 1.0)) {
-            error_log('pagecache purge: Redis connect failed');
-            return;
-        }
-        if ($auth = getenv('REDIS_AUTH')) {
-            $redis->auth($auth);
-        }
-        // Page cache lives in its own DB; the firewall is db0.
-        $redis->select((int) (getenv('PAGECACHE_DB') ?: 1));
-        $version  = (int) ($redis->get('pagecache:version') ?: 0);
-        $hostname = strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST));   // multisite: scope to this site
-        // Fence TTL must outlive the slowest realistic PHP render so a
-        // very slow in-flight request can still be fenced out. 60s is
-        // comfortably above normal render times; raise it if pages are
-        // known to render slower than that.
-        $fenceTtl = (int) (getenv('PAGECACHE_FENCE_TTL') ?: 60);
-        // Redis's own clock, not the web server's wall-clock - avoids
-        // clock drift between this PHP host and the OpenResty pods.
-        // Integer microseconds: "sec.usec" concatenation would mis-order
-        // within a second (usec isn't zero-padded). Must match the
-        // snapshot format in opt/lua/pagecache/init.lua (fetch()) in
-        // the hale-platform repo.
-        $time       = $redis->rawCommand('TIME');
-        $fenceValue = (is_array($time) && isset($time[0]))
-            ? (string) ((int) $time[0] * 1000000 + (int) ($time[1] ?? 0))
-            : null;
+        $version    = (int) ($redis->get('pagecache:version') ?: 0);
+        $hostname   = strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST));   // multisite: scope to this site
+        $fenceTtl   = hc_pagecache_fence_ttl();
+        $fenceValue = hc_pagecache_fence_value($redis);
         foreach ($paths as $path) {
             // Must match the Lua key schemes:
             //   content key -> pagecache:v{ver}:{host}:{uri}
@@ -133,5 +103,166 @@ function hc_pagecache_purge_paths(array $paths): void
         $redis->close();
     } catch (\Throwable $t) {
         error_log('pagecache purge failed: ' . $t->getMessage());
+    }
+}
+/**
+ * Connect to the page-cache Redis DB. Returns null (and logs) on any failure
+ * so callers can fail-soft. Uses the same env vars as the Lua cache layer.
+ */
+function hc_pagecache_redis_connect(): ?\Redis
+{
+    if (! class_exists('Redis')) {
+        error_log('pagecache purge: phpredis (Redis class) not available');
+        return null;
+    }
+    try {
+        $host = getenv('REDIS_HOST') ?: 'redis';
+        $port = (int) (getenv('REDIS_PORT') ?: 6379);
+        // ElastiCache in-transit encryption needs the tls:// scheme.
+        // Local dev sets REDIS_SSL=false.
+        if ('false' !== getenv('REDIS_SSL')) {
+            $host = 'tls://' . $host;
+        }
+        $redis = new Redis();
+        if (! $redis->connect($host, $port, 1.0)) {
+            error_log('pagecache purge: Redis connect failed');
+            return null;
+        }
+        if ($auth = getenv('REDIS_AUTH')) {
+            $redis->auth($auth);
+        }
+        // Page cache lives in its own DB; the firewall is db0.
+        $redis->select((int) (getenv('PAGECACHE_DB') ?: 1));
+        return $redis;
+    } catch (\Throwable $t) {
+        error_log('pagecache purge: Redis connection failed: ' . $t->getMessage());
+        return null;
+    }
+}
+/**
+ * Fence TTL must outlive the slowest realistic PHP render so a very slow
+ * in-flight request can still be fenced out. 60s is comfortably above normal
+ * render times; raise it if pages are known to render slower than that.
+ */
+function hc_pagecache_fence_ttl(): int
+{
+    return (int) (getenv('PAGECACHE_FENCE_TTL') ?: 60);
+}
+/**
+ * Purge-fence timestamp from Redis's own clock, not the web server's
+ * wall-clock - avoids clock drift between this PHP host and the OpenResty
+ * pods. Integer microseconds: "sec.usec" concatenation would mis-order
+ * within a second (usec isn't zero-padded). Must match the snapshot format
+ * in opt/lua/pagecache/init.lua (fetch()) in the hale-platform repo.
+ */
+function hc_pagecache_fence_value(\Redis $redis): ?string
+{
+    $time = $redis->rawCommand('TIME');
+    return (is_array($time) && isset($time[0]))
+        ? (string) ((int) $time[0] * 1000000 + (int) ($time[1] ?? 0))
+        : null;
+}
+/**
+ * Purge the page cache for EVERY site on the network at once.
+ *
+ * Bumps pagecache:version - the version is part of every content key
+ * (pagecache:v{ver}:{host}:{path}), so incrementing it instantly orphans
+ * all existing entries network-wide. No fences needed: an in-flight render
+ * writes to a key under the OLD version, which nothing reads any more.
+ * Orphaned keys expire on their own TTL (PAGECACHE_TTL, default 300s),
+ * so memory is reclaimed within minutes.
+ *
+ * @return int|\WP_Error The new cache version on success.
+ */
+function hc_pagecache_purge_all_sites(): int|\WP_Error
+{
+    if ('true' !== getenv('PAGECACHE_ENABLED')) {
+        return new \WP_Error('hc_pagecache_disabled', __('The page cache is not enabled (PAGECACHE_ENABLED).', 'hale-components'));
+    }
+    $redis = hc_pagecache_redis_connect();
+    if (null === $redis) {
+        return new \WP_Error('hc_pagecache_redis', __('Could not connect to the page cache Redis database.', 'hale-components'));
+    }
+    try {
+        $version = (int) $redis->incr('pagecache:version');
+        $redis->close();
+        return $version;
+    } catch (\Throwable $t) {
+        error_log('pagecache purge all: ' . $t->getMessage());
+        return new \WP_Error('hc_pagecache_redis', __('Redis error while clearing the cache.', 'hale-components'));
+    }
+}
+/**
+ * Purge every cached page belonging to the CURRENT site only.
+ *
+ * Cache keys are scoped by host + path. This is a subdirectory multisite
+ * (SUBDOMAIN_INSTALL false), so every site can share one hostname and a
+ * site is identified by its path prefix. We SCAN for
+ * pagecache:v{ver}:{host}:{site_path}* and DEL each match - but for the
+ * main site (path "/") that pattern also matches every subsite, so keys
+ * whose path belongs to a DESCENDANT site are skipped.
+ *
+ * Each deleted path also gets a purge fence stamped (same race-closing
+ * mechanism as hc_pagecache_purge_paths) so an in-flight render can't
+ * immediately re-cache stale content.
+ *
+ * @return int|\WP_Error Number of cache entries deleted on success.
+ */
+function hc_pagecache_purge_current_site(): int|\WP_Error
+{
+    if ('true' !== getenv('PAGECACHE_ENABLED')) {
+        return new \WP_Error('hc_pagecache_disabled', __('The page cache is not enabled (PAGECACHE_ENABLED).', 'hale-components'));
+    }
+    $redis = hc_pagecache_redis_connect();
+    if (null === $redis) {
+        return new \WP_Error('hc_pagecache_redis', __('Could not connect to the page cache Redis database.', 'hale-components'));
+    }
+    try {
+        $version   = (int) ($redis->get('pagecache:version') ?: 0);
+        $hostname  = strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST));
+        $site_path = '/';
+        $descendant_paths = [];
+        if (is_multisite()) {
+            $site      = get_site();
+            $site_path = $site ? $site->path : '/';
+            // Subdirectory multisite: any other site whose path sits under
+            // this site's path would be caught by the SCAN pattern below.
+            // Collect those paths so their keys can be skipped.
+            foreach (get_sites(['number' => 0]) as $other) {
+                if ((int) $other->blog_id === get_current_blog_id()) {
+                    continue;
+                }
+                if ($other->path !== $site_path && str_starts_with($other->path, $site_path)) {
+                    $descendant_paths[] = $other->path;
+                }
+            }
+        }
+        $prefix     = "pagecache:v{$version}:{$hostname}:";
+        $fenceTtl   = hc_pagecache_fence_ttl();
+        $fenceValue = hc_pagecache_fence_value($redis);
+        $purged     = 0;
+        $redis->setOption(\Redis::OPT_SCAN, \Redis::SCAN_RETRY);
+        $iterator = null;
+        do {
+            $keys = $redis->scan($iterator, $prefix . $site_path . '*', 500);
+            foreach ((array) $keys as $key) {
+                $path = substr($key, strlen($prefix));
+                foreach ($descendant_paths as $descendant) {
+                    if (str_starts_with($path, $descendant)) {
+                        continue 2;   // belongs to a subsite - leave it alone
+                    }
+                }
+                if (null !== $fenceValue) {
+                    $redis->set("pagecache:fence:{$hostname}:{$path}", $fenceValue, ['EX' => $fenceTtl]);
+                }
+                $redis->del($key);
+                $purged++;
+            }
+        } while ($iterator > 0);
+        $redis->close();
+        return $purged;
+    } catch (\Throwable $t) {
+        error_log('pagecache purge site: ' . $t->getMessage());
+        return new \WP_Error('hc_pagecache_redis', __('Redis error while clearing the cache.', 'hale-components'));
     }
 }
