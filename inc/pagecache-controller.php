@@ -43,6 +43,98 @@ function hc_pagecache_handle_purge_all(): void
 add_action('admin_post_hc_pagecache_purge_all', 'hc_pagecache_handle_purge_all');
 
 
+// --- Row action: purge ONE page/post from the list tables --------------------
+
+/**
+ * Add a "Purge cache" row action (next to Quick Edit / Trash) on the pages,
+ * posts, and CPT list tables, for items that can actually be in the page
+ * cache: published and publicly viewable.
+ *
+ * @param array    $actions
+ * @param \WP_Post $post
+ * @return array
+ */
+function hc_pagecache_row_actions(array $actions, \WP_Post $post): array
+{
+    if ('true' !== getenv('PAGECACHE_ENABLED')) {
+        return $actions;
+    }
+    if ('publish' !== $post->post_status) {
+        return $actions;
+    }
+    if (! is_post_type_viewable(get_post_type($post))) {
+        return $actions;
+    }
+    if (! current_user_can('edit_post', $post->ID)) {
+        return $actions;
+    }
+
+    $url = wp_nonce_url(
+        add_query_arg(
+            [
+                'action'  => 'hc_pagecache_purge_post',
+                'post_id' => $post->ID,
+            ],
+            admin_url('admin-post.php')
+        ),
+        'hc_pagecache_purge_post_' . $post->ID
+    );
+
+    $actions['hc_purge_cache'] = '<a href="' . esc_url($url) . '">' . esc_html__('Purge cache', 'hale-components') . '</a>';
+
+    return $actions;
+}
+add_filter('post_row_actions', 'hc_pagecache_row_actions', 10, 2);
+add_filter('page_row_actions', 'hc_pagecache_row_actions', 10, 2);
+
+/**
+ * Handles the "Purge cache" row action link.
+ *
+ * Deletes the cached entry for the item's permalink (with a purge fence, via
+ * hc_pagecache_purge_paths) and redirects back to the list table.
+ */
+function hc_pagecache_handle_purge_post(): void
+{
+    $post_id = (int) ($_GET['post_id'] ?? 0);
+    check_admin_referer('hc_pagecache_purge_post_' . $post_id);
+
+    if (! current_user_can('edit_post', $post_id)) {
+        wp_die(__('You do not have permission to do this.', 'hale-components'));
+    }
+
+    $post = get_post($post_id);
+    if (! $post || 'publish' !== $post->post_status || ! is_post_type_viewable(get_post_type($post))) {
+        wp_die(__('This item cannot be in the page cache.', 'hale-components'));
+    }
+
+    hc_pagecache_purge_paths([hc_pagecache_path(get_permalink($post))]);
+
+    set_transient('hc_pagecache_purge_post_success_' . get_current_user_id(), $post->post_title, 60);
+
+    wp_safe_redirect(wp_get_referer() ?: admin_url('edit.php?post_type=' . $post->post_type));
+    exit;
+}
+add_action('admin_post_hc_pagecache_purge_post', 'hc_pagecache_handle_purge_post');
+
+/**
+ * Success notice after a row-action purge, shown once on the next admin page.
+ */
+function hc_pagecache_purge_post_notice(): void
+{
+    $title = get_transient('hc_pagecache_purge_post_success_' . get_current_user_id());
+    if (false === $title) {
+        return;
+    }
+    delete_transient('hc_pagecache_purge_post_success_' . get_current_user_id());
+    ?>
+    <div class="notice notice-success is-dismissible">
+        <p><?php echo esc_html(sprintf(__('Page cache cleared for "%s".', 'hale-components'), $title)); ?></p>
+    </div>
+    <?php
+}
+add_action('admin_notices', 'hc_pagecache_purge_post_notice');
+
+
 // --- Site: clear cache for ONE site (site admins) ---------------------------
 
 /**
