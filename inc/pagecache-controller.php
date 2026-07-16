@@ -37,7 +37,8 @@ function hc_pagecache_handle_purge_all(): void
         set_transient('hc_pagecache_purge_all_success_' . get_current_user_id(), true, 60);
     }
 
-    wp_safe_redirect(wp_get_referer());
+    $redirect = wp_get_referer() ?: network_admin_url('admin.php?page=hale-components-network-dashboard');
+    wp_safe_redirect($redirect);
     exit;
 }
 add_action('admin_post_hc_pagecache_purge_all', 'hc_pagecache_handle_purge_all');
@@ -156,7 +157,8 @@ function hc_pagecache_handle_purge_site(): void
         set_transient('hc_pagecache_purge_site_success_' . get_current_user_id(), (string) $result, 60);
     }
 
-    wp_safe_redirect(wp_get_referer());
+    $redirect = wp_get_referer() ?: admin_url('options-general.php?page=hale-cache-settings');
+    wp_safe_redirect($redirect);
     exit;
 }
 add_action('admin_post_hc_pagecache_purge_site', 'hc_pagecache_handle_purge_site');

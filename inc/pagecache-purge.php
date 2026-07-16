@@ -102,6 +102,7 @@ function hc_pagecache_purge_paths(array $paths): void
         }
         $redis->close();
     } catch (\Throwable $t) {
+        try { $redis->close(); } catch (\Throwable $t2) {}
         error_log('pagecache purge failed: ' . $t->getMessage());
     }
 }
@@ -188,6 +189,7 @@ function hc_pagecache_purge_all_sites(): int|\WP_Error
         $redis->close();
         return $version;
     } catch (\Throwable $t) {
+        try { $redis->close(); } catch (\Throwable $t2) {}
         error_log('pagecache purge all: ' . $t->getMessage());
         return new \WP_Error('hc_pagecache_redis', __('Redis error while clearing the cache.', 'hale-components'));
     }

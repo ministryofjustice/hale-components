@@ -14,6 +14,7 @@ if ($hc_pagecache_redis instanceof \Redis) {
         $hc_pagecache_version = (int) ($hc_pagecache_redis->get('pagecache:version') ?: 0);
         $hc_pagecache_redis->close();
     } catch (\Throwable $t) {
+        try { $hc_pagecache_redis->close(); } catch (\Throwable $t2) {}
         $hc_pagecache_redis = null;
     }
 }
@@ -42,9 +43,9 @@ if ($hc_pagecache_purge_success) { delete_transient('hc_pagecache_purge_all_succ
     <div class="hc-dashboard-item">
         <div class="hc-dashboard-left">
             <h4><?php _e( 'Page Cache Status', 'hale-components' ); ?></h4>
-            <p><?php echo $hc_pagecache_enabled_message; ?></p>
+            <p><?php echo wp_kses_post( $hc_pagecache_enabled_message ); ?></p>
             <?php if ($hc_pagecache_enabled) : ?>
-                <p><?php echo $hc_pagecache_connected_message; ?></p>
+                <p><?php echo wp_kses_post( $hc_pagecache_connected_message ); ?></p>
                 <?php if (null !== $hc_pagecache_version) : ?>
                     <p><?php echo esc_html(sprintf(
                         __('Cache version: %1$d. Entries expire after %2$d seconds.', 'hale-components'),
@@ -69,7 +70,7 @@ if ($hc_pagecache_purge_success) { delete_transient('hc_pagecache_purge_all_succ
                 <form class="hc-dashboard-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="hc_pagecache_purge_all">
                     <?php wp_nonce_field('hc_pagecache_purge_all'); ?>
-                    <button type="submit" class="button button-primary" onclick="return confirm('<?php esc_attr_e('Clear the page cache for ALL sites on the network?', 'hale-components'); ?>')">
+                    <button type="submit" class="button button-primary" onclick="return confirm('<?php echo esc_js( __( 'Clear the page cache for ALL sites on the network?', 'hale-components' ) ); ?>')">
                         <?php _e('Clear page cache on all sites', 'hale-components'); ?>
                     </button>
                 </form>
