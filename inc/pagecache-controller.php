@@ -223,7 +223,7 @@ function hc_pagecache_settings_page_content(): void
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="hc_pagecache_purge_site">
                 <?php wp_nonce_field('hc_pagecache_purge_site'); ?>
-                <button type="submit" class="button button-primary" onclick="return confirm('<?php esc_attr_e('Clear all cached pages for this site?', 'hale-components'); ?>')">
+                <button type="submit" class="button button-primary" onclick="return confirm('<?php echo esc_js( __( 'Clear all cached pages for this site?', 'hale-components' ) ); ?>')">
                     <?php _e('Clear cache for this site', 'hale-components'); ?>
                 </button>
             </form>

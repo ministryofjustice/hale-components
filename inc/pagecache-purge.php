@@ -264,6 +264,7 @@ function hc_pagecache_purge_current_site(): int|\WP_Error
         $redis->close();
         return $purged;
     } catch (\Throwable $t) {
+        try { $redis->close(); } catch (\Throwable $t2) {}
         error_log('pagecache purge site: ' . $t->getMessage());
         return new \WP_Error('hc_pagecache_redis', __('Redis error while clearing the cache.', 'hale-components'));
     }
