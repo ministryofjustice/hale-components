@@ -54,6 +54,7 @@ function hc_network_dashboard_content() {
    	include plugin_dir_path( __FILE__ ) . '/parts/waf-status.php';
   	include plugin_dir_path( __FILE__ ) . '/parts/api-status.php';
   	include plugin_dir_path( __FILE__ ) . '/parts/lua-firewall.php';
+  	include plugin_dir_path( __FILE__ ) . '/parts/page-cache.php';
 	echo '</div>';
 }
 
