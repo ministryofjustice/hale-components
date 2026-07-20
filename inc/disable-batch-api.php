@@ -13,7 +13,7 @@ if (! defined('ABSPATH')) {
  * @param WP_REST_Request $request Current REST request.
  * @return mixed|WP_Error
  */
-function wporg_require_authentication_for_rest_batch( $result, $server, $request ) {
+function hale_require_authentication_for_rest_batch( $result, $server, $request ) {
     if ( '/batch/v1' !== strtolower( untrailingslashit( $request->get_route() ) ) || is_user_logged_in() ) {
         return $result;
     }
@@ -25,4 +25,4 @@ function wporg_require_authentication_for_rest_batch( $result, $server, $request
     );
 }
 
-add_filter( 'rest_pre_dispatch', 'wporg_require_authentication_for_rest_batch', -1000, 3 );
+add_filter( 'rest_pre_dispatch', 'hale_require_authentication_for_rest_batch', -1000, 3 );
