@@ -21,6 +21,7 @@ include 'inc/site-user-reports.php';
 include 'inc/blocks.php';
 include 'inc/comments.php';
 include 'inc/cloudfront.php';
+include 'inc/disable-ai.php';
 include 'inc/disable-batch-api.php';
 include 'inc/disable-user-api.php';
 include 'inc/pagecache-purge.php';
