@@ -4,7 +4,7 @@
 Plugin Name: Hale Components
 Plugin URI: https://github.com/ministryofjustice/hale-components
 Description: Functions that are commonly used across the Hale Platform.
-Version: 1.19.0
+Version: 1.19.1
 Author: Ministry of Justice
 Author URI: https://github.com/ministryofjustice
 Text Domain: hale-components
@@ -21,6 +21,7 @@ include 'inc/site-user-reports.php';
 include 'inc/blocks.php';
 include 'inc/comments.php';
 include 'inc/cloudfront.php';
+include 'inc/disable-ai.php';
 include 'inc/disable-batch-api.php';
 include 'inc/disable-user-api.php';
 include 'inc/pagecache-purge.php';
