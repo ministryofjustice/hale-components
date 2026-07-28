@@ -91,8 +91,9 @@ add_filter('page_row_actions', 'hc_pagecache_row_actions', 10, 2);
 /**
  * Handles the "Purge cache" row action link.
  *
- * Deletes the cached entry for the item's permalink (with a purge fence, via
- * hc_pagecache_purge_paths) and redirects back to the list table.
+ * Deletes the cached entry for the item's permalink AND for this site's
+ * homepage (which lists/links the item, so it goes stale too), with a purge
+ * fence via hc_pagecache_purge_paths, then redirects back to the list table.
  */
 function hc_pagecache_handle_purge_post(): void
 {
@@ -108,7 +109,12 @@ function hc_pagecache_handle_purge_post(): void
         wp_die(__('This item cannot be in the page cache.', 'hale-components'));
     }
 
-    hc_pagecache_purge_paths([hc_pagecache_path(get_permalink($post))]);
+    $paths = [
+        hc_pagecache_home_path(),                       // home lists/links the item
+        hc_pagecache_path(get_permalink($post)),
+    ];
+
+    hc_pagecache_purge_paths(array_values(array_unique(array_filter($paths))));
 
     set_transient('hc_pagecache_purge_post_success_' . get_current_user_id(), $post->post_title, 60);
 
