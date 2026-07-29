@@ -39,7 +39,7 @@ function hc_pagecache_on_transition($new_status, $old_status, $post): void
         return;
     }
     // URLs whose cached HTML is now stale.
-    $paths   = ['/'];                                       // home lists/links new content
+    $paths   = [hc_pagecache_home_path()];                  // home lists/links new content
     $paths[] = hc_pagecache_path(get_permalink($post));
     // Hierarchical pages: ancestors show breadcrumbs / child listings.
     foreach (get_post_ancestors($post) as $ancestor_id) {
@@ -54,6 +54,17 @@ function hc_pagecache_path($url): string
 {
     $path = wp_parse_url((string) $url, PHP_URL_PATH);
     return $path ?: '/';
+}
+/**
+ * The cache path of the CURRENT site's homepage.
+ *
+ * Not always "/": this is a subdirectory multisite, so a subsite's homepage
+ * is its path prefix (e.g. "/intranet/"). Hardcoding "/" would purge the main
+ * site's homepage instead of the one that actually went stale.
+ */
+function hc_pagecache_home_path(): string
+{
+    return hc_pagecache_path(home_url('/'));
 }
 /**
  * DELETE the page-cache keys for the given paths on the current site, and
