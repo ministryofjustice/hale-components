@@ -26,10 +26,10 @@ function hale_disable_public_user_api_endpoints($endpoints)
     }
 
     // Core user routes to remove for everyone else.
+    // '/wp/v2/users/me' is not disabled here (it has it's own auth checks).
     $user_routes = [
         '/wp/v2/users',
         '/wp/v2/users/(?P<id>[\d]+)',
-        '/wp/v2/users/me',
     ];
 
     foreach ($user_routes as $route) {
