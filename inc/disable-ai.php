@@ -5,6 +5,9 @@ if (! defined('ABSPATH')) {
     exit;
 }
 
+// Add filter to disable AI support.
+add_filter('wp_supports_ai', '__return_false');
+
 /**
  * Removes the Connectors (AL/LLM) submenu entry.
  */
