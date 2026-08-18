@@ -124,6 +124,11 @@ function hc_block_usage_enqueue() {
                 'siteId'     => __( 'Site ID %s', 'hale-components' ),
                 'error'      => __( 'Could not scan %s.', 'hale-components' ),
                 'invalid'    => __( 'Enter a block name, for example mojblocks/card.', 'hale-components' ),
+                'searching'  => __( 'Searching for %s', 'hale-components' ),
+                'namespace'  => __( 'every block in the %s namespace', 'hale-components' ),
+                'matched'    => __( 'Blocks matched', 'hale-components' ),
+                'block'      => __( 'Block', 'hale-components' ),
+                'hint'       => __( 'Search a whole namespace with wb-blocks/* — and remember ACF blocks are registered as acf/<name>, whatever the plugin calls itself.', 'hale-components' ),
             ),
         )
     );
@@ -185,27 +190,43 @@ function hc_block_usage_sites() {
 }
 
 /**
- * Normalise a user-supplied block name.
+ * Normalise a user-supplied search term.
  *
- * Core blocks may be typed either way ("paragraph" or "core/paragraph") and
- * always come back namespaced. Returns '' if the name is not a valid block
- * name, which the callers treat as a hard failure.
+ * Accepted forms:
+ *   mojblocks/card   an exact block
+ *   gallery          a core block, if core/gallery is registered
+ *   wb-blocks        a namespace, if it isn't a known core block  -> wb-blocks/*
+ *   wb-blocks/       every block in that namespace                -> wb-blocks/*
+ *   wb-blocks/*      the same, written explicitly
+ *
+ * Returns '' if the term can't be read as either, which callers treat as a
+ * hard failure. Note the deliberate choice to validate rather than strip:
+ * unexpected characters reject the term outright instead of quietly rewriting
+ * it into a different, valid looking block name.
  *
  * @param string $raw Raw input.
- * @return string Normalised block name, or ''.
+ * @return string Normalised query, or ''.
  */
 function hc_block_usage_sanitize_block_name( $raw ) {
-    // Deliberately validate rather than strip: a name containing anything
-    // unexpected is rejected outright, not quietly rewritten into a different
-    // (valid looking) block name.
     $name = strtolower( trim( (string) $raw ) );
 
     if ( '' === $name ) {
         return '';
     }
 
+    // Explicit namespace search: "wb-blocks/", "wb-blocks/*" or "wb-blocks*".
+    if ( preg_match( '#^([a-z0-9][a-z0-9_-]*)(?:/\*|/|\*)$#', $name, $matches ) ) {
+        return $matches[1] . '/*';
+    }
+
+    // A bare word is a core block if one is registered under that name,
+    // otherwise it is read as a namespace — nobody means core/wb-blocks.
     if ( false === strpos( $name, '/' ) ) {
-        $name = 'core/' . $name;
+        if ( ! preg_match( '#^[a-z0-9][a-z0-9_-]*$#', $name ) ) {
+            return '';
+        }
+
+        return hc_block_usage_block_is_known( 'core/' . $name ) ? 'core/' . $name : $name . '/*';
     }
 
     if ( ! preg_match( '#^[a-z0-9][a-z0-9_-]*/[a-z0-9][a-z0-9_-]*$#', $name ) ) {
@@ -213,6 +234,35 @@ function hc_block_usage_sanitize_block_name( $raw ) {
     }
 
     return $name;
+}
+
+/**
+ * Is this a namespace-wide query?
+ *
+ * @param string $query Normalised query.
+ * @return bool
+ */
+function hc_block_usage_is_namespace_query( $query ) {
+    return '/*' === substr( $query, -2 );
+}
+
+/**
+ * Has this block name been seen before, either registered here or found by a
+ * previous scan?
+ *
+ * @param string $name Block name.
+ * @return bool
+ */
+function hc_block_usage_block_is_known( $name ) {
+    if ( class_exists( 'WP_Block_Type_Registry' ) && WP_Block_Type_Registry::get_instance()->get_registered( $name ) ) {
+        return true;
+    }
+
+    $stored = is_multisite()
+        ? get_site_option( HC_BLOCK_USAGE_OPTION, array() )
+        : get_option( HC_BLOCK_USAGE_OPTION, array() );
+
+    return is_array( $stored ) && in_array( $name, $stored, true );
 }
 
 /**
@@ -229,26 +279,81 @@ function hc_block_usage_delimiter_name( $name ) {
 }
 
 /**
- * Count occurrences of a block in a parsed block tree, including inner blocks.
+ * The LIKE needle used to prefilter posts before parsing them.
+ *
+ * @param string $query Normalised query.
+ * @return string
+ */
+function hc_block_usage_like_needle( $query ) {
+    global $wpdb;
+
+    if ( hc_block_usage_is_namespace_query( $query ) ) {
+        $namespace = substr( $query, 0, -2 );
+
+        // Core blocks carry no namespace in the markup, so nothing narrower
+        // than "has blocks at all" is possible; the parser does the filtering.
+        if ( 'core' === $namespace ) {
+            return '%<!-- wp:%';
+        }
+
+        return '%<!-- wp:' . $wpdb->esc_like( $namespace ) . '/%';
+    }
+
+    return '%<!-- wp:' . $wpdb->esc_like( hc_block_usage_delimiter_name( $query ) ) . ' %';
+}
+
+/**
+ * Does a block name satisfy the query?
+ *
+ * @param string $block_name Block name from the parser.
+ * @param string $query      Normalised query.
+ * @return bool
+ */
+function hc_block_usage_matches( $block_name, $query ) {
+    if ( empty( $block_name ) ) {
+        return false;
+    }
+
+    if ( hc_block_usage_is_namespace_query( $query ) ) {
+        return 0 === strpos( $block_name, substr( $query, 0, -1 ) );
+    }
+
+    return $block_name === $query;
+}
+
+/**
+ * Tally matching blocks in a parsed tree, including inner blocks.
  *
  * @param array  $blocks Parsed blocks.
- * @param string $name   Block name to count.
- * @return int
+ * @param string $query  Normalised query.
+ * @param array  $tally  Accumulator of block name => count, by reference.
  */
-function hc_block_usage_count_blocks( $blocks, $name ) {
-    $count = 0;
-
+function hc_block_usage_tally_blocks( $blocks, $query, &$tally ) {
     foreach ( (array) $blocks as $block ) {
-        if ( isset( $block['blockName'] ) && $block['blockName'] === $name ) {
-            $count++;
+        $name = isset( $block['blockName'] ) ? $block['blockName'] : '';
+
+        if ( hc_block_usage_matches( $name, $query ) ) {
+            $tally[ $name ] = isset( $tally[ $name ] ) ? $tally[ $name ] + 1 : 1;
         }
 
         if ( ! empty( $block['innerBlocks'] ) ) {
-            $count += hc_block_usage_count_blocks( $block['innerBlocks'], $name );
+            hc_block_usage_tally_blocks( $block['innerBlocks'], $query, $tally );
         }
     }
+}
 
-    return $count;
+/**
+ * Count occurrences of a block (or namespace) in a parsed block tree.
+ *
+ * @param array  $blocks Parsed blocks.
+ * @param string $query  Normalised query.
+ * @return int
+ */
+function hc_block_usage_count_blocks( $blocks, $query ) {
+    $tally = array();
+    hc_block_usage_tally_blocks( $blocks, $query, $tally );
+
+    return array_sum( $tally );
 }
 
 /**
@@ -357,7 +462,7 @@ function hc_block_usage_scan_site( $site_id, $block ) {
 
     global $wpdb;
 
-    $needle = '%<!-- wp:' . $wpdb->esc_like( hc_block_usage_delimiter_name( $block ) ) . ' %';
+    $needle = hc_block_usage_like_needle( $block );
 
     // Revisions carry a copy of the post content and would double-count every
     // edit; the rest are internal post types that never hold editorial blocks.
@@ -376,6 +481,7 @@ function hc_block_usage_scan_site( $site_id, $block ) {
     $posts      = array();
     $instances  = 0;
     $seen_names = array();
+    $breakdown  = array();
 
     do {
         $sql = "SELECT ID, post_title, post_type, post_status, post_content
@@ -396,13 +502,24 @@ function hc_block_usage_scan_site( $site_id, $block ) {
 
             hc_block_usage_collect_block_names( $parsed, $seen_names );
 
-            $count = hc_block_usage_count_blocks( $parsed, $block );
+            $post_tally = array();
+            hc_block_usage_tally_blocks( $parsed, $block, $post_tally );
+
+            $count = array_sum( $post_tally );
 
             if ( ! $count ) {
                 continue;
             }
 
             $instances += $count;
+
+            foreach ( $post_tally as $tallied_name => $tallied_count ) {
+                $breakdown[ $tallied_name ] = isset( $breakdown[ $tallied_name ] )
+                    ? $breakdown[ $tallied_name ] + $tallied_count
+                    : $tallied_count;
+            }
+
+            arsort( $post_tally );
 
             $edit_link = get_edit_post_link( $row->ID, 'raw' );
             if ( ! $edit_link ) {
@@ -417,6 +534,7 @@ function hc_block_usage_scan_site( $site_id, $block ) {
                 'type'   => $row->post_type,
                 'status' => $row->post_status,
                 'count'  => $count,
+                'blocks' => $post_tally,
                 'view'   => (string) get_permalink( $row->ID ),
                 'edit'   => (string) $edit_link,
             );
@@ -443,11 +561,16 @@ function hc_block_usage_scan_site( $site_id, $block ) {
 
     hc_block_usage_remember_block_names( array_keys( $seen_names ) );
 
+    arsort( $breakdown );
+
     return array(
-        'site'      => $site,
-        'posts'     => $posts,
-        'instances' => $instances,
-        'postCount' => count( $posts ),
+        'query'       => $block,
+        'isNamespace' => hc_block_usage_is_namespace_query( $block ),
+        'site'        => $site,
+        'posts'       => $posts,
+        'instances'   => $instances,
+        'postCount'   => count( $posts ),
+        'breakdown'   => $breakdown,
     );
 }
 
@@ -525,11 +648,18 @@ function hc_block_usage_maybe_export_csv() {
 
     $output = fopen( 'php://output', 'w' );
 
-    fputcsv( $output, array( 'Block', 'Site ID', 'Site', 'Site URL', 'Post ID', 'Post title', 'Post type', 'Status', 'Instances', 'URL', 'Edit URL' ) );
+    fputcsv( $output, array( 'Query', 'Blocks matched', 'Site ID', 'Site', 'Site URL', 'Post ID', 'Post title', 'Post type', 'Status', 'Instances', 'URL', 'Edit URL' ) );
 
     foreach ( $rows as $row ) {
         if ( ! is_array( $row ) ) {
             continue;
+        }
+
+        $matched = array();
+        if ( ! empty( $row['blocks'] ) && is_array( $row['blocks'] ) ) {
+            foreach ( $row['blocks'] as $matched_name => $matched_count ) {
+                $matched[] = $matched_name . ' x' . (int) $matched_count;
+            }
         }
 
         fputcsv(
@@ -538,6 +668,7 @@ function hc_block_usage_maybe_export_csv() {
                 'hc_block_usage_csv_cell',
                 array(
                     $block,
+                    implode( '; ', $matched ),
                     isset( $row['siteId'] ) ? (int) $row['siteId'] : '',
                     isset( $row['siteName'] ) ? $row['siteName'] : '',
                     isset( $row['siteUrl'] ) ? esc_url_raw( $row['siteUrl'] ) : '',

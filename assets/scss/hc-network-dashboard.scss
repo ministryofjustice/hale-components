@@ -125,6 +125,31 @@
           font-size: 13px;
       }
 
+      .hc-block-usage-query {
+          color: #50575e;
+          margin: 10px 0 0;
+
+          code {
+              font-size: 13px;
+          }
+      }
+
+      .hc-block-usage-breakdown {
+          margin-bottom: 25px;
+          max-width: 640px;
+
+          h2 {
+              font-size: 16px;
+          }
+      }
+
+      /* Which blocks in the namespace a given post uses. */
+      .hc-block-usage-blocks {
+          color: #50575e;
+          font-size: 12px;
+          margin-top: 2px;
+      }
+
       .hc-block-usage-export {
           margin-bottom: 20px;
       }

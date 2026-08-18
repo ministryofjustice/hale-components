@@ -18,6 +18,8 @@
 	var progressText = progress ? progress.querySelector( '.hc-block-usage-progress-text' ) : null;
 	var progressBar = progress ? progress.querySelector( '.hc-block-usage-bar span' ) : null;
 	var summary = document.getElementById( 'hc-block-usage-summary' );
+	var breakdown = document.getElementById( 'hc-block-usage-breakdown' );
+	var queryLabel = document.getElementById( 'hc-block-usage-query' );
 	var results = document.getElementById( 'hc-block-usage-results' );
 	var empty = document.getElementById( 'hc-block-usage-empty' );
 	var exportForm = document.getElementById( 'hc-block-usage-export-form' );
@@ -38,6 +40,9 @@
 		posts: 0,
 		sitesUsing: 0,
 		rows: [],
+		breakdown: {},
+		query: '',
+		isNamespace: false,
 		startedAt: 0
 	};
 
@@ -111,6 +116,9 @@
 		state.posts = 0;
 		state.sitesUsing = 0;
 		state.rows = [];
+		state.breakdown = {};
+		state.query = '';
+		state.isNamespace = false;
 		state.startedAt = Date.now();
 
 		results.innerHTML = '';
@@ -174,13 +182,29 @@
 	}
 
 	function addSiteResult( data ) {
-		if ( ! data || ! data.instances ) {
+		if ( ! data ) {
+			return;
+		}
+
+		// The server normalises the term ("wb-blocks" becomes "wb-blocks/*"),
+		// so echo back what is actually being searched for.
+		if ( ! state.query && data.query ) {
+			state.query = data.query;
+			state.isNamespace = !! data.isNamespace;
+			renderQueryLabel();
+		}
+
+		if ( ! data.instances ) {
 			return;
 		}
 
 		state.instances += data.instances;
 		state.posts += data.postCount;
 		state.sitesUsing++;
+
+		Object.keys( data.breakdown || {} ).forEach( function ( name ) {
+			state.breakdown[ name ] = ( state.breakdown[ name ] || 0 ) + data.breakdown[ name ];
+		} );
 
 		data.posts.forEach( function ( post ) {
 			state.rows.push( {
@@ -192,6 +216,7 @@
 				type: post.type,
 				status: post.status,
 				count: post.count,
+				blocks: post.blocks || {},
 				view: post.view,
 				edit: post.edit
 			} );
@@ -199,6 +224,15 @@
 
 		results.appendChild( renderSite( data ) );
 		renderSummary();
+		renderBreakdown();
+	}
+
+	function blockList( blocks ) {
+		return Object.keys( blocks || {} )
+			.map( function ( name ) {
+				return name + ' ×' + blocks[ name ];
+			} )
+			.join( ', ' );
 	}
 
 	/* -------------------------------------------------------------- render */
@@ -210,6 +244,68 @@
 
 		progressBar.style.width = percent + '%';
 		progressText.textContent = sprintf( i18n.scanning, [ number( Math.min( done + 1, total ) ), number( total ) ] );
+	}
+
+	function renderQueryLabel() {
+		if ( ! queryLabel ) {
+			return;
+		}
+
+		queryLabel.hidden = false;
+		queryLabel.textContent = '';
+
+		var lead = sprintf( i18n.searching, [ '' ] ).replace( /\s+$/, '' );
+
+		queryLabel.appendChild( document.createTextNode( lead + ' ' ) );
+		queryLabel.appendChild( el( 'code', null, state.query ) );
+
+		if ( state.isNamespace ) {
+			queryLabel.appendChild(
+				document.createTextNode( ' — ' + sprintf( i18n.namespace, [ state.query.replace( '/*', '' ) ] ) )
+			);
+		}
+	}
+
+	function renderBreakdown() {
+		var names = Object.keys( state.breakdown );
+
+		if ( ! state.isNamespace || names.length < 2 ) {
+			return;
+		}
+
+		names.sort( function ( a, b ) {
+			return state.breakdown[ b ] - state.breakdown[ a ];
+		} );
+
+		breakdown.hidden = false;
+		breakdown.innerHTML = '';
+		breakdown.appendChild( el( 'h2', null, i18n.matched ) );
+
+		var table = el( 'table', { class: 'widefat striped hc-block-usage-table' } );
+		var thead = el( 'thead' );
+		var headRow = el( 'tr' );
+
+		[ i18n.block, i18n.used ].forEach( function ( label ) {
+			headRow.appendChild( el( 'th', { scope: 'col' }, label ) );
+		} );
+
+		thead.appendChild( headRow );
+		table.appendChild( thead );
+
+		var tbody = el( 'tbody' );
+
+		names.forEach( function ( name ) {
+			var row = el( 'tr' );
+			var cell = el( 'td' );
+
+			cell.appendChild( el( 'code', null, name ) );
+			row.appendChild( cell );
+			row.appendChild( el( 'td', { class: 'hc-block-usage-count' }, number( state.breakdown[ name ] ) ) );
+			tbody.appendChild( row );
+		} );
+
+		table.appendChild( tbody );
+		breakdown.appendChild( table );
 	}
 
 	function renderSummary() {
@@ -264,6 +360,10 @@
 				titleCell.textContent = post.title;
 			}
 
+			if ( state.isNamespace ) {
+				titleCell.appendChild( el( 'div', { class: 'hc-block-usage-blocks' }, blockList( post.blocks ) ) );
+			}
+
 			row.appendChild( titleCell );
 			row.appendChild( el( 'td', null, post.type ) );
 			row.appendChild( el( 'td', null, post.status ) );
@@ -306,12 +406,14 @@
 
 		if ( ! state.instances ) {
 			empty.hidden = false;
-			empty.textContent = sprintf( i18n.none, [ state.block ] );
+			empty.textContent = '';
+			empty.appendChild( document.createTextNode( sprintf( i18n.none, [ state.query || state.block ] ) + ' ' ) );
+			empty.appendChild( el( 'span', { class: 'description' }, i18n.hint ) );
 			exportForm.hidden = true;
 			return;
 		}
 
-		exportBlock.value = state.block;
+		exportBlock.value = state.query || state.block;
 		exportData.value = JSON.stringify( state.rows );
 		exportForm.hidden = false;
 	}

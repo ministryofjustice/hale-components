@@ -38,6 +38,8 @@ $hc_block_usage_count = count( hc_block_usage_sites() );
     <label for="hc-block-usage-name"><strong><?php esc_html_e( 'Block name', 'hale-components' ); ?></strong></label>
     <p class="description">
         <?php esc_html_e( 'For example mojblocks/card. Core blocks can be entered either way — "gallery" or "core/gallery".', 'hale-components' ); ?>
+        <br>
+        <?php esc_html_e( 'Enter a namespace on its own — wb-blocks, or wb-blocks/* — to find every block it provides, broken down by block.', 'hale-components' ); ?>
     </p>
     <input
         type="text"
@@ -69,7 +71,11 @@ $hc_block_usage_count = count( hc_block_usage_sites() );
     <div class="hc-block-usage-bar"><span></span></div>
 </div>
 
+<p id="hc-block-usage-query" class="hc-block-usage-query" hidden></p>
+
 <div id="hc-block-usage-summary" class="hc-block-usage-summary" hidden></div>
+
+<div id="hc-block-usage-breakdown" class="hc-block-usage-breakdown" hidden></div>
 
 <form method="post" id="hc-block-usage-export-form" class="hc-block-usage-export" hidden>
     <?php wp_nonce_field( 'hc_block_usage_export_action', 'hc_block_usage_export_nonce' ); ?>
