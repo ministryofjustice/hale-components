@@ -32,9 +32,13 @@
         "postcss": "^8.3.5",
         "resolve-url-loader": "*",
         "sass": "*",
-        "sass-loader": "*"
+        "sass-loader": "*",
+        "webpack": "5.105.0"
     },
     "dependencies": {
         "govuk-frontend": "^4.6.0"
+    },
+    "overrides": {
+        "webpack": "5.105.0"
     }
 }

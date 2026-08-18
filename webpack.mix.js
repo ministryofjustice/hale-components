@@ -3,6 +3,7 @@ const mix_ = require('laravel-mix');
 mix_.setPublicPath('./dist')
   .sass('./assets/scss/login.scss', 'css/login.css')
   .sass('./assets/scss/hc-network-dashboard.scss', 'css/hc-network-dashboard.css')
+  .js('./assets/js/hc-block-usage.js', 'js/hc-block-usage.js')
   .options({
     processCssUrls: false
   });
