@@ -238,3 +238,125 @@ function hc_pagecache_settings_page_content(): void
     </div>
     <?php
 }
+
+if (defined('WP_CLI') && WP_CLI) {
+    class HC_Pagecache_CLI
+    {
+        /**
+         * Clears the page cache for every site on the network.
+         *
+         * ## EXAMPLES
+         *
+         *     wp pagecache purge-all
+         *
+         * @when after_wp_load
+         */
+        public function purge_all()
+        {
+            $result = hc_pagecache_purge_all_sites();
+
+            if (is_wp_error($result)) {
+                if ('hc_pagecache_disabled' === $result->get_error_code()) {
+                    \WP_CLI::success('Page cache is not enabled; nothing to clear.');
+                    return;
+                }
+                \WP_CLI::error($result->get_error_message());
+            }
+
+            \WP_CLI::success("Page cache cleared network-wide (version now {$result}).");
+        }
+
+        /**
+         * Clears the page cache for every site using a given theme.
+         *
+         * Matches on BOTH the active theme and its parent, so clearing
+         * "hale" also covers hale-dash and hale-showcase, which declare
+         * "Template: hale" in their style.css.
+         *
+         * ## OPTIONS
+         *
+         * <theme>
+         * : Theme directory slug, e.g. hale or govwind.
+         *
+         * ## EXAMPLES
+         *
+         *     wp pagecache purge-theme hale
+         *     wp pagecache purge-theme govwind
+         *
+         * @when after_wp_load
+         */
+        public function purge_theme($args)
+        {
+            [$theme] = $args;
+
+            if ('true' !== getenv('PAGECACHE_ENABLED')) {
+                \WP_CLI::success('Page cache is not enabled; nothing to clear.');
+                return;
+            }
+
+            $sites = is_multisite()
+                ? get_sites(['number' => 0])
+                : [null];
+
+            $matched = 0;
+            $keys    = 0;
+            $failed  = 0;
+
+            foreach ($sites as $site) {
+                if (null !== $site) {
+                    switch_to_blog((int) $site->blog_id);
+                }
+
+                $is_match = in_array(
+                    $theme,
+                    [get_option('stylesheet'), get_option('template')],
+                    true
+                );
+
+                if ($is_match) {
+                    $matched++;
+                    $result = hc_pagecache_purge_current_site();
+
+                    if (is_wp_error($result)) {
+                        // Don't abort the whole run for one bad site.
+                        $failed++;
+                        \WP_CLI::warning(sprintf(
+                            'Site %s: %s',
+                            home_url(),
+                            $result->get_error_message()
+                        ));
+                    } else {
+                        $keys += $result;
+                        \WP_CLI::log(sprintf(
+                            'Cleared %d entries for %s',
+                            $result,
+                            home_url()
+                        ));
+                    }
+                }
+
+                if (null !== $site) {
+                    restore_current_blog();
+                }
+            }
+
+            if (0 === $matched) {
+                \WP_CLI::warning("No sites are using the '{$theme}' theme; nothing cleared.");
+                return;
+            }
+
+            if ($failed > 0) {
+                \WP_CLI::error(sprintf(
+                    "Cleared %d entries across %d of %d '%s' sites; %d failed.",
+                    $keys, $matched - $failed, $matched, $theme, $failed
+                ));
+            }
+
+            \WP_CLI::success(sprintf(
+                "Cleared %d entries across %d '%s' site(s).",
+                $keys, $matched, $theme
+            ));
+        }
+    }
+    \WP_CLI::add_command('pagecache', 'HC_Pagecache_CLI');
+}
