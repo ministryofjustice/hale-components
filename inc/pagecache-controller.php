@@ -94,15 +94,22 @@ function hc_pagecache_get_mode(): array|false
         return false;
     }
 
-    $config = (false === $config_string || null === $config_string)
-        ? []
-        : (json_decode($config_string, true) ?? []);
-
-    if (! is_array($config)) {
-        return false;
+    // A missing key is not corruption: it means "active", the same default the
+    // Lua module applies. Anything present but not decodable to a JSON object
+    // IS corruption and must be reported so the dashboard can offer to repair
+    // it. Decoded as an object (not assoc) for the same reason
+    // hc_pagecache_update_mode() does: assoc arrays cannot tell a JSON object
+    // from a JSON array, so '["a"]' would otherwise read back as "active".
+    if (false === $config_string || null === $config_string) {
+        $config = new \stdClass();
+    } else {
+        $config = json_decode($config_string);
+        if (! is_object($config)) {
+            return false;
+        }
     }
 
-    $mode = $config['mode'] ?? 'active';
+    $mode = $config->mode ?? 'active';
 
     if (! is_string($mode) || ! array_key_exists($mode, $modes)) {
         return false;
@@ -156,11 +163,19 @@ function hc_pagecache_update_mode(string $new_mode): true|\WP_Error
         $old_mode      = $config->mode ?? 'active';
         $config->mode  = $new_mode;
 
-        $redis->set('pagecache:config', wp_json_encode($config));
-
+        // Bump BEFORE writing the config, not after. These are two separate
+        // round trips and the second can fail on its own. Written the other way
+        // round, a SET that succeeds followed by a failed INCR leaves the cache
+        // active with pre-disable entries still valid, and a retry sees
+        // $old_mode === $new_mode so it never bumps - the failure never heals.
+        // In this order the orphan case is a bumped version with the config
+        // unchanged: one harmless extra flush, and the retry still sees a real
+        // mode change and completes properly.
         if ($old_mode !== $new_mode) {
             $redis->incr('pagecache:version');
         }
+
+        $redis->set('pagecache:config', wp_json_encode($config));
 
         $redis->close();
         return true;

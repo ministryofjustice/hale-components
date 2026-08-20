@@ -70,18 +70,22 @@ if ($hc_pagecache_mode_success) { delete_transient('hc_pagecache_mode_success_' 
         <div class="hc-dashboard-right">
             <h4><?php _e( 'Manage the Page Cache', 'hale-components' ); ?></h4>
 
-            <?php if ($hc_pagecache_enabled && $hc_pagecache_redis instanceof \Redis) : ?>
+            <?php // Mode flashes render outside the Redis guard below: an unreachable
+                  // Redis is itself a reason hc_pagecache_update_mode() fails, and the
+                  // transient is read+deleted unconditionally above, so gating these
+                  // would swallow the error entirely. ?>
+            <?php if ($hc_pagecache_mode_success) : ?>
+                <p class="hc-status-on"><?php printf(
+                    /* translators: %s: the mode that was just applied, active or inactive. */
+                    esc_html__('Page cache mode updated to %s.', 'hale-components'),
+                    esc_html($hc_pagecache_mode_success)
+                ); ?></p>
+            <?php endif; ?>
+            <?php if ($hc_pagecache_mode_error) : ?>
+                <p class="hc-status-off"><?php echo esc_html($hc_pagecache_mode_error); ?></p>
+            <?php endif; ?>
 
-                <?php if ($hc_pagecache_mode_success) : ?>
-                    <p class="hc-status-on"><?php printf(
-                        /* translators: %s: the mode that was just applied, active or inactive. */
-                        esc_html__('Page cache mode updated to %s.', 'hale-components'),
-                        esc_html($hc_pagecache_mode_success)
-                    ); ?></p>
-                <?php endif; ?>
-                <?php if ($hc_pagecache_mode_error) : ?>
-                    <p class="hc-status-off"><?php echo esc_html($hc_pagecache_mode_error); ?></p>
-                <?php endif; ?>
+            <?php if ($hc_pagecache_enabled && $hc_pagecache_redis instanceof \Redis) : ?>
 
                 <?php if (false === $hc_pagecache_mode) : ?>
                     <p class="hc-status-off">
