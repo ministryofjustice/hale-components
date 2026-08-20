@@ -25,6 +25,7 @@ include 'inc/disable-ai.php';
 include 'inc/disable-user-api.php';
 include 'inc/pagecache-purge.php';
 include 'inc/pagecache-controller.php';
+include 'inc/asset-cdn.php';
 
 
 // Only include the network dashboard if this is a multisite setup
