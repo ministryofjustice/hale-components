@@ -19,6 +19,13 @@ if ($hc_pagecache_redis instanceof \Redis) {
     }
 }
 
+// --- Runtime mode ----------------------------------------------------------
+// false means Redis is unreachable or the stored value is not a mode we know,
+// so the UI offers to repair it. A missing key is not an error: that reads
+// back as 'active', the same default the Lua module applies.
+$hc_pagecache_mode     = $hc_pagecache_enabled ? hc_pagecache_get_mode() : false;
+$hc_pagecache_mode_key = is_array($hc_pagecache_mode) ? $hc_pagecache_mode['key'] : 'active';
+
 // --- Human-readable status strings for the UI -----------------------------
 $hc_pagecache_enabled_message = $hc_pagecache_enabled
     ? __('<span class="hc-status-on">ON</span> PAGECACHE_ENABLED environment variable is true.', 'hale-components')
@@ -35,6 +42,11 @@ $hc_pagecache_purge_error   = get_transient('hc_pagecache_purge_all_error_'   . 
 $hc_pagecache_purge_success = get_transient('hc_pagecache_purge_all_success_' . get_current_user_id());
 if ($hc_pagecache_purge_error)   { delete_transient('hc_pagecache_purge_all_error_'   . get_current_user_id()); }
 if ($hc_pagecache_purge_success) { delete_transient('hc_pagecache_purge_all_success_' . get_current_user_id()); }
+
+$hc_pagecache_mode_error   = get_transient('hc_pagecache_mode_error_'   . get_current_user_id());
+$hc_pagecache_mode_success = get_transient('hc_pagecache_mode_success_' . get_current_user_id());
+if ($hc_pagecache_mode_error)   { delete_transient('hc_pagecache_mode_error_'   . get_current_user_id()); }
+if ($hc_pagecache_mode_success) { delete_transient('hc_pagecache_mode_success_' . get_current_user_id()); }
 
 ?>
 
@@ -57,6 +69,51 @@ if ($hc_pagecache_purge_success) { delete_transient('hc_pagecache_purge_all_succ
         </div>
         <div class="hc-dashboard-right">
             <h4><?php _e( 'Manage the Page Cache', 'hale-components' ); ?></h4>
+
+            <?php if ($hc_pagecache_enabled && $hc_pagecache_redis instanceof \Redis) : ?>
+
+                <?php if ($hc_pagecache_mode_success) : ?>
+                    <p class="hc-status-on"><?php printf(
+                        /* translators: %s: the mode that was just applied, active or inactive. */
+                        esc_html__('Page cache mode updated to %s.', 'hale-components'),
+                        esc_html($hc_pagecache_mode_success)
+                    ); ?></p>
+                <?php endif; ?>
+                <?php if ($hc_pagecache_mode_error) : ?>
+                    <p class="hc-status-off"><?php echo esc_html($hc_pagecache_mode_error); ?></p>
+                <?php endif; ?>
+
+                <?php if (false === $hc_pagecache_mode) : ?>
+                    <p class="hc-status-off">
+                        <?php _e('Warning: the stored page cache mode in Redis is invalid. Defaulting to "Active". Pick a mode below and click Update mode to repair it.', 'hale-components'); ?>
+                    </p>
+                <?php endif; ?>
+
+                <p>
+                    <?php _e('Inactive turns the page cache off across the whole network within a few seconds.', 'hale-components'); ?>
+                    <br/>
+                    <?php _e('Pages are served by WordPress directly, and nothing is cached or served from the cache until it is set back to Active.', 'hale-components'); ?>
+                </p>
+
+                <form class="hc-dashboard-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="hc_pagecache_update_mode">
+                    <?php wp_nonce_field('hc_pagecache_update_mode'); ?>
+                    <select name="pagecache_mode">
+                        <?php foreach (hc_pagecache_get_all_modes() as $hc_mode_key => $hc_mode_label) : ?>
+                            <option
+                                value="<?php echo esc_attr($hc_mode_key); ?>"
+                                <?php selected($hc_mode_key, $hc_pagecache_mode_key); ?>
+                            >
+                                <?php echo esc_html($hc_mode_label); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="submit" class="button button-primary">
+                        <?php _e('Update mode', 'hale-components'); ?>
+                    </button>
+                </form>
+
+            <?php endif; ?>
 
             <?php if ($hc_pagecache_purge_success) : ?>
                 <p class="hc-status-on"><?php _e('Page cache cleared on all sites.', 'hale-components'); ?></p>
