@@ -9,6 +9,12 @@
  *   2. Site admins: Settings -> Cache on each site - deletes the cached
  *      entries for that site only.
  *
+ * Also owns the runtime page-cache MODE (active/inactive), stored in Redis as
+ * pagecache:config and read by opt/lua/pagecache/init.lua in the hale-platform
+ * repo. This is the soft switch: it flips network-wide in about a second with
+ * no deploy. PAGECACHE_ENABLED remains the hard switch and wins over the mode.
+ * Same shape as the firewall's mode in inc/lua-firewall-controller.php.
+ *
  * The purge functions themselves live in inc/pagecache-purge.php.
  */
 
@@ -42,6 +48,208 @@ function hc_pagecache_handle_purge_all(): void
     exit;
 }
 add_action('admin_post_hc_pagecache_purge_all', 'hc_pagecache_handle_purge_all');
+
+
+// --- Runtime mode: active / inactive (network admins) -----------------------
+
+/**
+ * The modes the page cache understands. Keys are stored in Redis and read by
+ * the Lua module; values are the labels shown in the UI.
+ *
+ * Must stay in sync with VALID_MODES in opt/lua/pagecache/init.lua.
+ */
+function hc_pagecache_get_all_modes(): array
+{
+    return [
+        'active'   => 'Active',
+        'inactive' => 'Inactive',
+    ];
+}
+
+/**
+ * Current mode from pagecache:config.
+ *
+ * Returns ['key' => ..., 'label' => ...], or false if the stored value is
+ * present but not a mode we recognise, so the dashboard can offer to repair
+ * it. A missing key is not an error: it means "active", the same default the
+ * Lua module applies.
+ *
+ * @return array{key: string, label: string}|false
+ */
+function hc_pagecache_get_mode(): array|false
+{
+    $modes = hc_pagecache_get_all_modes();
+
+    $redis = hc_pagecache_redis_connect();
+    if (null === $redis) {
+        return false;
+    }
+
+    try {
+        $config_string = $redis->get('pagecache:config');
+        $redis->close();
+    } catch (\Throwable $t) {
+        try { $redis->close(); } catch (\Throwable $t2) {}
+        error_log('pagecache mode: ' . $t->getMessage());
+        return false;
+    }
+
+    // A missing key is not corruption: it means "active", the same default the
+    // Lua module applies. Anything present but not decodable to a JSON object
+    // IS corruption and must be reported so the dashboard can offer to repair
+    // it. Decoded as an object (not assoc) for the same reason
+    // hc_pagecache_update_mode() does: assoc arrays cannot tell a JSON object
+    // from a JSON array, so '["a"]' would otherwise read back as "active".
+    if (false === $config_string || null === $config_string) {
+        $config = new \stdClass();
+    } else {
+        $config = json_decode($config_string);
+        if (! is_object($config)) {
+            return false;
+        }
+    }
+
+    $mode = $config->mode ?? 'active';
+
+    if (! is_string($mode) || ! array_key_exists($mode, $modes)) {
+        return false;
+    }
+
+    return [
+        'key'   => $mode,
+        'label' => $modes[$mode],
+    ];
+}
+
+/**
+ * Set the runtime page-cache mode.
+ *
+ * Reads pagecache:config, swaps in $new_mode, writes it back, and bumps
+ * pagecache:version when the mode actually changed. The bump matters: without
+ * it, going active -> inactive -> active would resurrect entries written
+ * before the cache was switched off, which is exactly the content whoever
+ * flipped the switch was trying to stop serving.
+ *
+ * Every nginx pod picks the change up within about a second - no restart.
+ *
+ * @param string $new_mode One of the keys from hc_pagecache_get_all_modes().
+ * @return true|\WP_Error
+ */
+function hc_pagecache_update_mode(string $new_mode): true|\WP_Error
+{
+    if ('true' !== getenv('PAGECACHE_ENABLED')) {
+        return new \WP_Error('hc_pagecache_disabled', __('The page cache is not enabled (PAGECACHE_ENABLED).', 'hale-components'));
+    }
+
+    if (! array_key_exists($new_mode, hc_pagecache_get_all_modes())) {
+        return new \WP_Error('hc_pagecache_invalid_mode', __('Invalid page cache mode.', 'hale-components'));
+    }
+
+    $redis = hc_pagecache_redis_connect();
+    if (null === $redis) {
+        return new \WP_Error('hc_pagecache_redis', __('Could not connect to the page cache Redis database.', 'hale-components'));
+    }
+
+    try {
+        // Decode as an object, not an array, so any keys added to this config
+        // later survive a mode change untouched (and an empty {} re-encodes as
+        // an object rather than []).
+        $config_string = $redis->get('pagecache:config');
+        $config        = $config_string ? json_decode($config_string) : null;
+        if (! is_object($config)) {
+            $config = new \stdClass();
+        }
+
+        $old_mode      = $config->mode ?? 'active';
+        $config->mode  = $new_mode;
+
+        // Bump BEFORE writing the config, not after. These are two separate
+        // round trips and the second can fail on its own. Written the other way
+        // round, a SET that succeeds followed by a failed INCR leaves the cache
+        // active with pre-disable entries still valid, and a retry sees
+        // $old_mode === $new_mode so it never bumps - the failure never heals.
+        // In this order the orphan case is a bumped version with the config
+        // unchanged: one harmless extra flush, and the retry still sees a real
+        // mode change and completes properly.
+        if ($old_mode !== $new_mode) {
+            $redis->incr('pagecache:version');
+        }
+
+        $redis->set('pagecache:config', wp_json_encode($config));
+
+        $redis->close();
+        return true;
+    } catch (\Throwable $t) {
+        try { $redis->close(); } catch (\Throwable $t2) {}
+        error_log('pagecache update mode: ' . $t->getMessage());
+        return new \WP_Error('hc_pagecache_redis', __('Redis error while updating the page cache mode.', 'hale-components'));
+    }
+}
+
+/**
+ * Handles the "update page cache mode" form on the network dashboard.
+ */
+function hc_pagecache_handle_update_mode(): void
+{
+    check_admin_referer('hc_pagecache_update_mode');
+
+    if (! current_user_can('manage_network_options')) {
+        wp_die(__('You do not have permission to do this.', 'hale-components'));
+    }
+
+    $new_mode = sanitize_key($_POST['pagecache_mode'] ?? '');
+    $result   = hc_pagecache_update_mode($new_mode);
+
+    if (is_wp_error($result)) {
+        set_transient('hc_pagecache_mode_error_' . get_current_user_id(), $result->get_error_message(), 60);
+    } else {
+        set_transient('hc_pagecache_mode_success_' . get_current_user_id(), $new_mode, 60);
+    }
+
+    $redirect = wp_get_referer() ?: network_admin_url('admin.php?page=hale-components-network-dashboard');
+    wp_safe_redirect($redirect);
+    exit;
+}
+add_action('admin_post_hc_pagecache_update_mode', 'hc_pagecache_handle_update_mode');
+
+/**
+ * WP-CLI mirror of the dashboard control, for when the admin UI is the thing
+ * that is broken:
+ *
+ *   wp hale-pagecache mode            # print the current mode
+ *   wp hale-pagecache mode inactive   # turn the cache off network-wide
+ */
+if (defined('WP_CLI') && WP_CLI) {
+    class HC_Pagecache_CLI
+    {
+        /**
+         * Gets or sets the runtime page cache mode.
+         *
+         * ## OPTIONS
+         *
+         * [<mode>]
+         * : The mode to set - active or inactive. Omit to print the current mode.
+         */
+        public function mode($args)
+        {
+            if (empty($args)) {
+                $current = hc_pagecache_get_mode();
+                if (false === $current) {
+                    \WP_CLI::error('Could not read the page cache mode (Redis unreachable, or the stored value is invalid).');
+                }
+                \WP_CLI::log($current['key']);
+                return;
+            }
+
+            $result = hc_pagecache_update_mode($args[0]);
+            if (is_wp_error($result)) {
+                \WP_CLI::error($result->get_error_message());
+            }
+            \WP_CLI::success("Page cache mode set to {$args[0]}.");
+        }
+    }
+    \WP_CLI::add_command('hale-pagecache', 'HC_Pagecache_CLI');
+}
 
 
 // --- Row action: purge ONE page/post from the list tables --------------------
