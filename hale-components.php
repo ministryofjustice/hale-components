@@ -19,6 +19,7 @@ include 'inc/site-path-track.php';
 include 'inc/login-settings.php';
 include 'inc/site-user-reports.php'; 
 include 'inc/blocks.php';
+include 'inc/block-usage-report.php';
 include 'inc/comments.php';
 include 'inc/cloudfront.php';
 include 'inc/disable-ai.php';
