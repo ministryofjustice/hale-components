@@ -1,10 +1,10 @@
 <?php
 /**
- * Serve compiled theme assets from the CDN
+ * Serve compiled theme and plugin assets from the CDN
  *
  * Rewrites enqueued stylesheet and script URLs that point at wp-content/themes
- * so they resolve to a release-scoped prefix on CloudFront instead of the pod
- * the request happened to land on.
+ * or wp-content/plugins so they resolve to a release-scoped prefix on
+ * CloudFront instead of the pod the request happened to land on.
  *
  * WHY
  * Compiled CSS/JS is baked into the container image, so every pod serves its
@@ -21,13 +21,15 @@
  * retrievable, so HTML always resolves the CSS it was built against - whatever
  * pod answers, and however stale the HTML is.
  *
- * Assets are published by the "Publish theme assets to CDN" step in
- * .github/workflows/rw-build-image.yaml (hale-platform).
+ * Assets are published by the "Publish theme and plugin assets to CDN" step
+ * in .github/workflows/rw-build-image.yaml (hale-platform).
  *
  * SCOPE
- * Themes only. Plugin assets are not published to the CDN yet, so plugin URLs
- * are deliberately left alone - rewriting them would point at a prefix that
- * does not exist.
+ * wp-content/themes and wp-content/plugins, minus any src/ or vendor/ subtree
+ * - the publish step does not upload those, so rewriting their URLs would
+ * point at a prefix that does not exist. mu-plugins are not published and are
+ * left alone; so are uploads, which wp-s3-uploads already serves from their
+ * own CloudFront path.
  *
  * CONFIGURATION
  * Both constants are set from the environment by opt/scripts/config.sh, the
@@ -116,11 +118,11 @@ function hale_cdn_config(): ?array
 }
 
 /**
- * Rewrite a theme asset URL to its release-scoped CDN equivalent.
+ * Rewrite a theme or plugin asset URL to its release-scoped CDN equivalent.
  *
  * Hooked to style_loader_src and script_loader_src, so it covers everything
- * enqueued through WordPress - all themes and their children - without each
- * one needing to know the CDN exists.
+ * enqueued through WordPress - every theme and plugin - without each one
+ * needing to know the CDN exists.
  *
  * @param  string $src
  * @return string The CDN URL, or $src unchanged if it should not be rewritten.
@@ -157,16 +159,26 @@ function hale_cdn_rewrite_asset_url($src)
 
     // Path relative to wp-content, e.g.
     //   "/themes/hale/dist/css/style.min.css?id=8f7d3a2b"
+    //   "/plugins/website-builder-blocks/build/index.js?ver=1.2.3"
     $relative = substr($probe, strlen($config['base']));
 
-    // Themes only - see SCOPE above. Uploads are already on their own
-    // CloudFront path via wp-s3-uploads and must not be touched.
-    if (0 !== strpos($relative, '/themes/')) {
+    // Only the trees the publish step uploads - see SCOPE above. mu-plugins
+    // are not published; uploads are already on their own CloudFront path
+    // via wp-s3-uploads and must not be touched.
+    if (! preg_match('#^/(?:themes|plugins)/#', $relative)) {
+        return $src;
+    }
+
+    // src/ and vendor/ are excluded from the upload
+    // (.github/workflows/rw-build-image.yaml), so their URLs would 404 on the
+    // CDN - leave them resolving against the pod.
+    if (preg_match('#/(?:src|vendor|node_modules)/#', $relative)) {
         return $src;
     }
 
     // Mirrors the S3 layout written by the publish step:
     //   s3://<bucket>/assets/<release>/themes/<theme>/dist/...
+    //   s3://<bucket>/assets/<release>/plugins/<plugin>/build/...
     return $config['cdn'] . '/assets/' . $config['release'] . $relative;
 }
 
