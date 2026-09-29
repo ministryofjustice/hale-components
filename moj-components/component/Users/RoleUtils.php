@@ -97,5 +97,14 @@ class RoleUtils
         global $post_ID;
         return !current_user_can('administrator') && ($post_ID === (int)get_option('page_on_front'));
     }
+
+    /**
+     * Determine if the current user has the Site Manager role.
+     * @return bool
+     */
+    public static function isSiteManager()
+    {
+        return in_array('site-manager', (array) wp_get_current_user()->roles, true);
+    }
 }
 

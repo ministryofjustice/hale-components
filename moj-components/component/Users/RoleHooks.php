@@ -116,9 +116,28 @@ class RoleHooks
      */
     public static function actionRemoveEditSiteAdminBarLink($wp_admin_bar)
     {
-        if (in_array('site-manager', (array) wp_get_current_user()->roles, true)) {
+        if (RoleUtils::isSiteManager()) {
             $wp_admin_bar->remove_node('site-editor');
         }
+    }
+
+    /**
+     * Hide the `Styles` navigation item in the Site Editor for Site Managers
+     *
+     * @param string $hook_suffix
+     */
+    public static function actionHideSiteEditorStylesButton($hook_suffix)
+    {
+        if ($hook_suffix !== 'site-editor.php' || !RoleUtils::isSiteManager()) {
+            return;
+        }
+
+        wp_register_style('moj-site-manager-site-editor', false);
+        wp_enqueue_style('moj-site-manager-site-editor');
+        wp_add_inline_style(
+            'moj-site-manager-site-editor',
+            '#global-styles-navigation-item { display: none !important; }'
+        );
     }
 
     /**
@@ -223,6 +242,7 @@ class RoleHooks
         add_filter('map_meta_cap', __CLASS__ . '::allowUnfilteredHTMLforAllEditors', 10, 3);
         add_action('admin_menu', __CLASS__ . '::actionRestrictAppearanceThemesMenu', 999);
         add_action('admin_bar_menu', __CLASS__ . '::actionRemoveEditSiteAdminBarLink', 999);
+        add_action('admin_enqueue_scripts', __CLASS__ . '::actionHideSiteEditorStylesButton');
 
         // stop Editors
         add_action('transition_post_status', __CLASS__ . '::onHomepageStatusChange', 10, 3);
