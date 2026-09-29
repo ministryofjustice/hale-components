@@ -110,6 +110,18 @@ class RoleHooks
     }
 
     /**
+     * Remove the `Edit Site` link from the admin bar for Site Managers
+     *
+     * @param \WP_Admin_Bar $wp_admin_bar
+     */
+    public static function actionRemoveEditSiteAdminBarLink($wp_admin_bar)
+    {
+        if (in_array('site-manager', (array) wp_get_current_user()->roles, true)) {
+            $wp_admin_bar->remove_node('site-editor');
+        }
+    }
+
+    /**
      * Show a notification to the user if an unqualified attempt has been made to remove the homepage
      * from public view.
      */
@@ -210,6 +222,7 @@ class RoleHooks
         add_filter('map_meta_cap', __CLASS__ . '::filterPreventModificationOfAdminUser', 10, 4);
         add_filter('map_meta_cap', __CLASS__ . '::allowUnfilteredHTMLforAllEditors', 10, 3);
         add_action('admin_menu', __CLASS__ . '::actionRestrictAppearanceThemesMenu', 999);
+        add_action('admin_bar_menu', __CLASS__ . '::actionRemoveEditSiteAdminBarLink', 999);
 
         // stop Editors
         add_action('transition_post_status', __CLASS__ . '::onHomepageStatusChange', 10, 3);
