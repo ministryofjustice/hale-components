@@ -8,7 +8,7 @@ if (! defined('ABSPATH')) {
 // Stop the Auth0 plugin (4.x) writing to the options table on every request.
 // V5 and V6 don't use the auth0_db_version option, so this filter is inert there,
 // but it should be removed when upgrading from V4.
-add_filter('pre_update_option_auth0_db_version', 'hale_auth0_db_version_noop', 10, 2);
+add_filter('pre_update_option_auth0_db_version', 'hc_auth0_db_version_noop', 10, 2);
 
 /**
  * Auth0 4.x runs WP_Auth0_DBManager::install_db() on plugins_loaded, which calls
@@ -23,7 +23,7 @@ add_filter('pre_update_option_auth0_db_version', 'hale_auth0_db_version_noop', 1
  * @param mixed $old_value The old option value.
  * @return mixed The new value, or the old value when they differ only by type (so the update is skipped).
  */
-function hale_auth0_db_version_noop($value, $old_value)
+function hc_auth0_db_version_noop($value, $old_value)
 {
     return (string) $value === (string) $old_value ? $old_value : $value;
 }
