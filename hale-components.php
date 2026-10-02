@@ -24,6 +24,7 @@ include 'inc/comments.php';
 include 'inc/cloudfront.php';
 include 'inc/disable-ai.php';
 include 'inc/disable-user-api.php';
+include 'inc/auth0-db-version.php';
 include 'inc/pagecache-purge.php';
 include 'inc/pagecache-controller.php';
 include 'inc/sentry-browser-sdk.php';
