@@ -11,7 +11,7 @@ add_filter('wp_supports_ai', '__return_false');
 add_action(
     'admin_menu',
     static function () {
-        if (function_exists('wp_supports_ai') && !wp_supports_ai()) {
+        if (!wp_supports_ai()) {
             remove_submenu_page('options-general.php', 'options-connectors.php');
         }
     },
@@ -24,7 +24,7 @@ add_action(
 add_action(
     'load-options-connectors.php',
     static function () {
-        if (function_exists('wp_supports_ai') && !wp_supports_ai()) {
+        if (!wp_supports_ai()) {
             wp_safe_redirect(admin_url());
             exit;
         }
@@ -42,10 +42,7 @@ add_action(
 add_action(
     'admin_init',
     static function () {
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        $page = $_GET['page'] ?? '';
-
-        if ('options-connectors' === $page && function_exists('wp_supports_ai') && !wp_supports_ai()) {
+        if ('options-connectors' === ($_GET['page'] ?? '') && !wp_supports_ai()) {
             wp_safe_redirect(admin_url());
             exit;
         }
