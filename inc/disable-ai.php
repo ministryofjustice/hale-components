@@ -2,6 +2,11 @@
 
 defined('ABSPATH') || exit;
 
+// The AI API (wp_supports_ai) was added in WordPress 7.0. Before that there's nothing to disable.
+if (!function_exists('wp_supports_ai')) {
+    return;
+}
+
 // Add filter to disable AI support.
 add_filter('wp_supports_ai', '__return_false');
 
