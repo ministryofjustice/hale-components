@@ -37,7 +37,7 @@ add_action(
 );
 
 /**
- * Redirects requests that render the Connectors (AL/LLM) page by query string.
+ * Redirects requests that render the Connectors (AI/LLM) page by query string.
  *
  * Core renders the page for any admin request with ?page=options-connectors
  * (e.g. admin-post.php) from wp_options_connectors_intercept_render() on
