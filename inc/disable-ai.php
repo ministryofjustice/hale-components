@@ -1,9 +1,6 @@
 <?php
 
-// Exit if accessed directly.
-if (! defined('ABSPATH')) {
-    exit;
-}
+defined('ABSPATH') || exit;
 
 // Add filter to disable AI support.
 add_filter('wp_supports_ai', '__return_false');
@@ -32,4 +29,26 @@ add_action(
             exit;
         }
     }
+);
+
+/**
+ * Redirects requests that render the Connectors (AL/LLM) page by query string.
+ *
+ * Core renders the page for any admin request with ?page=options-connectors
+ * (e.g. admin-post.php) from wp_options_connectors_intercept_render() on
+ * admin_init at priority 10, so load-options-connectors.php never fires.
+ * Priority 1 runs before it.
+ */
+add_action(
+    'admin_init',
+    static function () {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $page = $_GET['page'] ?? '';
+
+        if ('options-connectors' === $page && function_exists('wp_supports_ai') && !wp_supports_ai()) {
+            wp_safe_redirect(admin_url());
+            exit;
+        }
+    },
+    1
 );
