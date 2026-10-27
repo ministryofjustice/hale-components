@@ -1,6 +1,6 @@
 <?php
 
-defined('ABSPATH') || exit;
+defined("ABSPATH") || exit();
 
 /**
  * Defaults Relevanssi Premium click tracking to off.
@@ -9,7 +9,4 @@ defined('ABSPATH') || exit;
  * plugin is first activated on a site. This flips it to off at that point only, so
  * site admins can still opt in later from the Relevanssi settings.
  */
-add_action(
-    'add_option_relevanssi_click_tracking',
-    fn ($option) => update_option($option, 'off')
-);
+add_action("add_option_relevanssi_click_tracking", fn($option) => update_option($option, "off"));

@@ -8,8 +8,8 @@
  * touches any object cache.
  */
 
-if (! defined('ABSPATH')) {
-    exit;
+if (!defined("ABSPATH")) {
+	exit();
 }
 
 /*
@@ -17,7 +17,7 @@ if (! defined('ABSPATH')) {
  * WP-Cron publishes a scheduled post. transition_post_status fires for manual
  * publish, scheduled publish, and edits of already-live content.
  */
-add_action('transition_post_status', 'hc_pagecache_on_transition', 10, 3);
+add_action("transition_post_status", "hc_pagecache_on_transition", 10, 3);
 /**
  * @param string  $new_status
  * @param string  $old_status
@@ -25,35 +25,35 @@ add_action('transition_post_status', 'hc_pagecache_on_transition', 10, 3);
  */
 function hc_pagecache_on_transition($new_status, $old_status, $post): void
 {
-    if ('true' !== getenv('PAGECACHE_ENABLED')) {
-        return;
-    }
-    // Only act when the result is a live, publicly viewable page/post.
-    if ('publish' !== $new_status) {
-        return;
-    }
-    if (wp_is_post_revision($post) || wp_is_post_autosave($post)) {
-        return;
-    }
-    if (! is_post_type_viewable(get_post_type($post))) {
-        return;
-    }
-    // URLs whose cached HTML is now stale.
-    $paths   = [hc_pagecache_home_path()];                  // home lists/links new content
-    $paths[] = hc_pagecache_path(get_permalink($post));
-    // Hierarchical pages: ancestors show breadcrumbs / child listings.
-    foreach (get_post_ancestors($post) as $ancestor_id) {
-        $paths[] = hc_pagecache_path(get_permalink($ancestor_id));
-    }
-    hc_pagecache_purge_paths(array_values(array_unique(array_filter($paths))));
+	if ("true" !== getenv("PAGECACHE_ENABLED")) {
+		return;
+	}
+	// Only act when the result is a live, publicly viewable page/post.
+	if ("publish" !== $new_status) {
+		return;
+	}
+	if (wp_is_post_revision($post) || wp_is_post_autosave($post)) {
+		return;
+	}
+	if (!is_post_type_viewable(get_post_type($post))) {
+		return;
+	}
+	// URLs whose cached HTML is now stale.
+	$paths = [hc_pagecache_home_path()]; // home lists/links new content
+	$paths[] = hc_pagecache_path(get_permalink($post));
+	// Hierarchical pages: ancestors show breadcrumbs / child listings.
+	foreach (get_post_ancestors($post) as $ancestor_id) {
+		$paths[] = hc_pagecache_path(get_permalink($ancestor_id));
+	}
+	hc_pagecache_purge_paths(array_values(array_unique(array_filter($paths))));
 }
 /**
  * Reduce a full permalink to the path used in the cache key (e.g. "/about/").
  */
 function hc_pagecache_path($url): string
 {
-    $path = wp_parse_url((string) $url, PHP_URL_PATH);
-    return $path ?: '/';
+	$path = wp_parse_url((string) $url, PHP_URL_PATH);
+	return $path ?: "/";
 }
 /**
  * The cache path of the CURRENT site's homepage.
@@ -64,7 +64,7 @@ function hc_pagecache_path($url): string
  */
 function hc_pagecache_home_path(): string
 {
-    return hc_pagecache_path(home_url('/'));
+	return hc_pagecache_path(home_url("/"));
 }
 /**
  * DELETE the page-cache keys for the given paths on the current site, and
@@ -86,36 +86,39 @@ function hc_pagecache_home_path(): string
  */
 function hc_pagecache_purge_paths(array $paths): void
 {
-    if ('true' !== getenv('PAGECACHE_ENABLED') || empty($paths)) {
-        return;
-    }
-    $redis = hc_pagecache_redis_connect();
-    if (null === $redis) {
-        return;
-    }
-    try {
-        $version    = (int) ($redis->get('pagecache:version') ?: 0);
-        $hostname   = strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST));   // multisite: scope to this site
-        $fenceTtl   = hc_pagecache_fence_ttl();
-        $fenceValue = hc_pagecache_fence_value($redis);
-        foreach ($paths as $path) {
-            // Must match the Lua key schemes:
-            //   content key -> pagecache:v{ver}:{host}:{uri}
-            //   fence key   -> pagecache:fence:{host}:{uri}   (unversioned)
-            $contentKey = "pagecache:v{$version}:{$hostname}:{$path}";
-            $fenceKey   = "pagecache:fence:{$hostname}:{$path}";
-            if (null !== $fenceValue) {
-                $redis->set($fenceKey, $fenceValue, ['EX' => $fenceTtl]);
-            } else {
-                error_log('pagecache purge: Redis TIME unavailable, fence not set for ' . $path);
-            }
-            $redis->del($contentKey);
-        }
-        $redis->close();
-    } catch (\Throwable $t) {
-        try { $redis->close(); } catch (\Throwable $t2) {}
-        error_log('pagecache purge failed: ' . $t->getMessage());
-    }
+	if ("true" !== getenv("PAGECACHE_ENABLED") || empty($paths)) {
+		return;
+	}
+	$redis = hc_pagecache_redis_connect();
+	if (null === $redis) {
+		return;
+	}
+	try {
+		$version = (int) ($redis->get("pagecache:version") ?: 0);
+		$hostname = strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST)); // multisite: scope to this site
+		$fenceTtl = hc_pagecache_fence_ttl();
+		$fenceValue = hc_pagecache_fence_value($redis);
+		foreach ($paths as $path) {
+			// Must match the Lua key schemes:
+			//   content key -> pagecache:v{ver}:{host}:{uri}
+			//   fence key   -> pagecache:fence:{host}:{uri}   (unversioned)
+			$contentKey = "pagecache:v{$version}:{$hostname}:{$path}";
+			$fenceKey = "pagecache:fence:{$hostname}:{$path}";
+			if (null !== $fenceValue) {
+				$redis->set($fenceKey, $fenceValue, ["EX" => $fenceTtl]);
+			} else {
+				error_log("pagecache purge: Redis TIME unavailable, fence not set for " . $path);
+			}
+			$redis->del($contentKey);
+		}
+		$redis->close();
+	} catch (\Throwable $t) {
+		try {
+			$redis->close();
+		} catch (\Throwable $t2) {
+		}
+		error_log("pagecache purge failed: " . $t->getMessage());
+	}
 }
 /**
  * Connect to the page-cache Redis DB. Returns null (and logs) on any failure
@@ -123,33 +126,33 @@ function hc_pagecache_purge_paths(array $paths): void
  */
 function hc_pagecache_redis_connect(): ?\Redis
 {
-    if (! class_exists('Redis')) {
-        error_log('pagecache purge: phpredis (Redis class) not available');
-        return null;
-    }
-    try {
-        $host = getenv('REDIS_HOST') ?: 'redis';
-        $port = (int) (getenv('REDIS_PORT') ?: 6379);
-        // ElastiCache in-transit encryption needs the tls:// scheme.
-        // Local dev sets REDIS_SSL=false.
-        if ('false' !== getenv('REDIS_SSL')) {
-            $host = 'tls://' . $host;
-        }
-        $redis = new Redis();
-        if (! $redis->connect($host, $port, 1.0)) {
-            error_log('pagecache purge: Redis connect failed');
-            return null;
-        }
-        if ($auth = getenv('REDIS_AUTH')) {
-            $redis->auth($auth);
-        }
-        // Page cache lives in its own DB; the firewall is db0.
-        $redis->select((int) (getenv('PAGECACHE_DB') ?: 1));
-        return $redis;
-    } catch (\Throwable $t) {
-        error_log('pagecache purge: Redis connection failed: ' . $t->getMessage());
-        return null;
-    }
+	if (!class_exists("Redis")) {
+		error_log("pagecache purge: phpredis (Redis class) not available");
+		return null;
+	}
+	try {
+		$host = getenv("REDIS_HOST") ?: "redis";
+		$port = (int) (getenv("REDIS_PORT") ?: 6379);
+		// ElastiCache in-transit encryption needs the tls:// scheme.
+		// Local dev sets REDIS_SSL=false.
+		if ("false" !== getenv("REDIS_SSL")) {
+			$host = "tls://" . $host;
+		}
+		$redis = new Redis();
+		if (!$redis->connect($host, $port, 1.0)) {
+			error_log("pagecache purge: Redis connect failed");
+			return null;
+		}
+		if ($auth = getenv("REDIS_AUTH")) {
+			$redis->auth($auth);
+		}
+		// Page cache lives in its own DB; the firewall is db0.
+		$redis->select((int) (getenv("PAGECACHE_DB") ?: 1));
+		return $redis;
+	} catch (\Throwable $t) {
+		error_log("pagecache purge: Redis connection failed: " . $t->getMessage());
+		return null;
+	}
 }
 /**
  * Fence TTL must outlive the slowest realistic PHP render so a very slow
@@ -158,7 +161,7 @@ function hc_pagecache_redis_connect(): ?\Redis
  */
 function hc_pagecache_fence_ttl(): int
 {
-    return (int) (getenv('PAGECACHE_FENCE_TTL') ?: 60);
+	return (int) (getenv("PAGECACHE_FENCE_TTL") ?: 60);
 }
 /**
  * Purge-fence timestamp from Redis's own clock, not the web server's
@@ -169,10 +172,8 @@ function hc_pagecache_fence_ttl(): int
  */
 function hc_pagecache_fence_value(\Redis $redis): ?string
 {
-    $time = $redis->rawCommand('TIME');
-    return (is_array($time) && isset($time[0]))
-        ? (string) ((int) $time[0] * 1000000 + (int) ($time[1] ?? 0))
-        : null;
+	$time = $redis->rawCommand("TIME");
+	return is_array($time) && isset($time[0]) ? (string) ((int) $time[0] * 1000000 + (int) ($time[1] ?? 0)) : null;
 }
 /**
  * Purge the page cache for EVERY site on the network at once.
@@ -188,22 +189,31 @@ function hc_pagecache_fence_value(\Redis $redis): ?string
  */
 function hc_pagecache_purge_all_sites(): int|\WP_Error
 {
-    if ('true' !== getenv('PAGECACHE_ENABLED')) {
-        return new \WP_Error('hc_pagecache_disabled', __('The page cache is not enabled (PAGECACHE_ENABLED).', 'hale-components'));
-    }
-    $redis = hc_pagecache_redis_connect();
-    if (null === $redis) {
-        return new \WP_Error('hc_pagecache_redis', __('Could not connect to the page cache Redis database.', 'hale-components'));
-    }
-    try {
-        $version = (int) $redis->incr('pagecache:version');
-        $redis->close();
-        return $version;
-    } catch (\Throwable $t) {
-        try { $redis->close(); } catch (\Throwable $t2) {}
-        error_log('pagecache purge all: ' . $t->getMessage());
-        return new \WP_Error('hc_pagecache_redis', __('Redis error while clearing the cache.', 'hale-components'));
-    }
+	if ("true" !== getenv("PAGECACHE_ENABLED")) {
+		return new \WP_Error(
+			"hc_pagecache_disabled",
+			__("The page cache is not enabled (PAGECACHE_ENABLED).", "hale-components"),
+		);
+	}
+	$redis = hc_pagecache_redis_connect();
+	if (null === $redis) {
+		return new \WP_Error(
+			"hc_pagecache_redis",
+			__("Could not connect to the page cache Redis database.", "hale-components"),
+		);
+	}
+	try {
+		$version = (int) $redis->incr("pagecache:version");
+		$redis->close();
+		return $version;
+	} catch (\Throwable $t) {
+		try {
+			$redis->close();
+		} catch (\Throwable $t2) {
+		}
+		error_log("pagecache purge all: " . $t->getMessage());
+		return new \WP_Error("hc_pagecache_redis", __("Redis error while clearing the cache.", "hale-components"));
+	}
 }
 /**
  * Purge every cached page belonging to the CURRENT site only.
@@ -223,60 +233,69 @@ function hc_pagecache_purge_all_sites(): int|\WP_Error
  */
 function hc_pagecache_purge_current_site(): int|\WP_Error
 {
-    if ('true' !== getenv('PAGECACHE_ENABLED')) {
-        return new \WP_Error('hc_pagecache_disabled', __('The page cache is not enabled (PAGECACHE_ENABLED).', 'hale-components'));
-    }
-    $redis = hc_pagecache_redis_connect();
-    if (null === $redis) {
-        return new \WP_Error('hc_pagecache_redis', __('Could not connect to the page cache Redis database.', 'hale-components'));
-    }
-    try {
-        $version   = (int) ($redis->get('pagecache:version') ?: 0);
-        $hostname  = strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST));
-        $site_path = '/';
-        $descendant_paths = [];
-        if (is_multisite()) {
-            $site      = get_site();
-            $site_path = $site ? $site->path : '/';
-            // Subdirectory multisite: any other site whose path sits under
-            // this site's path would be caught by the SCAN pattern below.
-            // Collect those paths so their keys can be skipped.
-            foreach (get_sites(['number' => 0]) as $other) {
-                if ((int) $other->blog_id === get_current_blog_id()) {
-                    continue;
-                }
-                if ($other->path !== $site_path && str_starts_with($other->path, $site_path)) {
-                    $descendant_paths[] = $other->path;
-                }
-            }
-        }
-        $prefix     = "pagecache:v{$version}:{$hostname}:";
-        $fenceTtl   = hc_pagecache_fence_ttl();
-        $fenceValue = hc_pagecache_fence_value($redis);
-        $purged     = 0;
-        $redis->setOption(\Redis::OPT_SCAN, \Redis::SCAN_RETRY);
-        $iterator = null;
-        do {
-            $keys = $redis->scan($iterator, $prefix . $site_path . '*', 500);
-            foreach ((array) $keys as $key) {
-                $path = substr($key, strlen($prefix));
-                foreach ($descendant_paths as $descendant) {
-                    if (str_starts_with($path, $descendant)) {
-                        continue 2;   // belongs to a subsite - leave it alone
-                    }
-                }
-                if (null !== $fenceValue) {
-                    $redis->set("pagecache:fence:{$hostname}:{$path}", $fenceValue, ['EX' => $fenceTtl]);
-                }
-                $redis->del($key);
-                $purged++;
-            }
-        } while ($iterator > 0);
-        $redis->close();
-        return $purged;
-    } catch (\Throwable $t) {
-        try { $redis->close(); } catch (\Throwable $t2) {}
-        error_log('pagecache purge site: ' . $t->getMessage());
-        return new \WP_Error('hc_pagecache_redis', __('Redis error while clearing the cache.', 'hale-components'));
-    }
+	if ("true" !== getenv("PAGECACHE_ENABLED")) {
+		return new \WP_Error(
+			"hc_pagecache_disabled",
+			__("The page cache is not enabled (PAGECACHE_ENABLED).", "hale-components"),
+		);
+	}
+	$redis = hc_pagecache_redis_connect();
+	if (null === $redis) {
+		return new \WP_Error(
+			"hc_pagecache_redis",
+			__("Could not connect to the page cache Redis database.", "hale-components"),
+		);
+	}
+	try {
+		$version = (int) ($redis->get("pagecache:version") ?: 0);
+		$hostname = strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST));
+		$site_path = "/";
+		$descendant_paths = [];
+		if (is_multisite()) {
+			$site = get_site();
+			$site_path = $site ? $site->path : "/";
+			// Subdirectory multisite: any other site whose path sits under
+			// this site's path would be caught by the SCAN pattern below.
+			// Collect those paths so their keys can be skipped.
+			foreach (get_sites(["number" => 0]) as $other) {
+				if ((int) $other->blog_id === get_current_blog_id()) {
+					continue;
+				}
+				if ($other->path !== $site_path && str_starts_with($other->path, $site_path)) {
+					$descendant_paths[] = $other->path;
+				}
+			}
+		}
+		$prefix = "pagecache:v{$version}:{$hostname}:";
+		$fenceTtl = hc_pagecache_fence_ttl();
+		$fenceValue = hc_pagecache_fence_value($redis);
+		$purged = 0;
+		$redis->setOption(\Redis::OPT_SCAN, \Redis::SCAN_RETRY);
+		$iterator = null;
+		do {
+			$keys = $redis->scan($iterator, $prefix . $site_path . "*", 500);
+			foreach ((array) $keys as $key) {
+				$path = substr($key, strlen($prefix));
+				foreach ($descendant_paths as $descendant) {
+					if (str_starts_with($path, $descendant)) {
+						continue 2; // belongs to a subsite - leave it alone
+					}
+				}
+				if (null !== $fenceValue) {
+					$redis->set("pagecache:fence:{$hostname}:{$path}", $fenceValue, ["EX" => $fenceTtl]);
+				}
+				$redis->del($key);
+				$purged++;
+			}
+		} while ($iterator > 0);
+		$redis->close();
+		return $purged;
+	} catch (\Throwable $t) {
+		try {
+			$redis->close();
+		} catch (\Throwable $t2) {
+		}
+		error_log("pagecache purge site: " . $t->getMessage());
+		return new \WP_Error("hc_pagecache_redis", __("Redis error while clearing the cache.", "hale-components"));
+	}
 }

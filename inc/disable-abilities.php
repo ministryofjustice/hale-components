@@ -1,6 +1,6 @@
 <?php
 
-defined('ABSPATH') || exit;
+defined("ABSPATH") || exit();
 
 /**
  * Unregisters every ability, from core and from plugins.
@@ -12,11 +12,11 @@ defined('ABSPATH') || exit;
  * @param WP_Abilities_Registry $registry The abilities registry.
  */
 add_action(
-    'wp_abilities_api_init',
-    static function ($registry) {
-        foreach (array_keys($registry->get_all_registered()) as $name) {
-            $registry->unregister($name);
-        }
-    },
-    PHP_INT_MAX
+	"wp_abilities_api_init",
+	static function ($registry) {
+		foreach (array_keys($registry->get_all_registered()) as $name) {
+			$registry->unregister($name);
+		}
+	},
+	PHP_INT_MAX,
 );

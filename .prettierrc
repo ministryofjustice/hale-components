@@ -1,0 +1,8 @@
+{
+	"plugins": ["@prettier/plugin-php"],
+	"useTabs": true,
+	"printWidth": 120,
+	"proseWrap": "preserve",
+	"arrowParens": "avoid",
+	"htmlWhitespaceSensitivity": "ignore"
+}
