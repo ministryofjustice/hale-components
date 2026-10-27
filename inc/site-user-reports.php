@@ -1,25 +1,27 @@
 <?php
 
- add_action( 'admin_menu', function() {
-    add_users_page(
-        'User Reports',          // Page title
-        'User Reports',          // Menu title
-        'list_users',            // Capability
-        'site-user-reports',    // Slug
-        'hc_render_site_user_reports_page' // Callback
-    );
+add_action("admin_menu", function () {
+	add_users_page(
+		"User Reports", // Page title
+		"User Reports", // Menu title
+		"list_users", // Capability
+		"site-user-reports", // Slug
+		"hc_render_site_user_reports_page", // Callback
+	);
 });
 
 /**
  * Get user email domains (multisite-aware).
  */
-function hc_get_user_email_domains_multisite() {
-    global $wpdb;
+function hc_get_user_email_domains_multisite()
+{
+	global $wpdb;
 
-    if ( is_multisite() ) {
-        $prefix = $wpdb->get_blog_prefix( get_current_blog_id() );
+	if (is_multisite()) {
+		$prefix = $wpdb->get_blog_prefix(get_current_blog_id());
 
-        $sql = $wpdb->prepare("
+		$sql = $wpdb->prepare(
+			"
             SELECT DISTINCT
                 SUBSTRING_INDEX(u.user_email, '@', -1) AS domain
             FROM {$wpdb->users} u
@@ -27,46 +29,48 @@ function hc_get_user_email_domains_multisite() {
                 ON um.user_id = u.ID
             WHERE um.meta_key = %s
             ORDER BY domain ASC
-        ", $prefix . 'capabilities' );
+        ",
+			$prefix . "capabilities",
+		);
 
-        return $wpdb->get_col( $sql );
-    }
+		return $wpdb->get_col($sql);
+	}
 
-    $sql = "
+	$sql = "
         SELECT DISTINCT
             SUBSTRING_INDEX(user_email, '@', -1) AS domain
         FROM {$wpdb->users}
         ORDER BY domain ASC
     ";
 
-    return $wpdb->get_col( $sql );
+	return $wpdb->get_col($sql);
 }
 
-function hc_render_site_user_reports_page() {
+function hc_render_site_user_reports_page()
+{
+	if (!current_user_can("list_users")) {
+		wp_die("User does not have the permissions to do this action");
+	}
 
-    if(!current_user_can('list_users')){
-        wp_die('User does not have the permissions to do this action');
-    }
-    
-    $domains = hc_get_user_email_domains_multisite();
-    ?>
+	$domains = hc_get_user_email_domains_multisite();
+	?>
     <div class="wrap">
         <h1>User Reports</h1>
         <p>Creates csv report of users.</p>
         <p>By default the report will not be filtered. You can be filter this report by selecting a email domain below.</p>
         <form method="post">
-            <?php  wp_nonce_field('generate_site_user_report_action', 'generate_site_user_report_nonce'); ?>
+            <?php wp_nonce_field("generate_site_user_report_action", "generate_site_user_report_nonce"); ?>
             <label for="user_report_email_domain"><strong>Email Domain:</strong></label><br>
             <br>
             <select name="user_report_email_domain" id="user_report_email_domain">
                 <option value="">— Select a email domain —</option>
-                <?php foreach ( $domains as $domain ) : ?>
-                    <option value="<?php echo esc_attr( $domain ); ?>">
-                        <?php echo esc_html( $domain ); ?>
+                <?php foreach ($domains as $domain): ?>
+                    <option value="<?php echo esc_attr($domain); ?>">
+                        <?php echo esc_html($domain); ?>
                     </option>
                 <?php endforeach; ?>
             </select>
-            <?php  submit_button('Generate Report', 'generate_site_user_report', 'generate_site_user_report'); ?>
+            <?php submit_button("Generate Report", "generate_site_user_report", "generate_site_user_report"); ?>
         </form>
 
        
@@ -74,64 +78,63 @@ function hc_render_site_user_reports_page() {
     <?php
 }
 
-add_action('init', 'hc_generate_site_user_report');
+add_action("init", "hc_generate_site_user_report");
 
-function hc_generate_site_user_report() {
+function hc_generate_site_user_report()
+{
+	if (isset($_POST["generate_site_user_report"])) {
+		if (!current_user_can("list_users")) {
+			wp_die("User does not have the permissions to do this action");
+		}
 
-    if ( isset($_POST['generate_site_user_report']) ) {
+		if (
+			!isset($_POST["generate_site_user_report_nonce"]) ||
+			!wp_verify_nonce($_POST["generate_site_user_report_nonce"], "generate_site_user_report_action")
+		) {
+			wp_die("Security check failed.");
+		}
 
-        if(!current_user_can('list_users')){
-            wp_die('User does not have the permissions to do this action');
-        }
+		$users = [];
+		$file_name = "user-report-" . time() . ".csv";
 
-        if ( ! isset($_POST['generate_site_user_report_nonce']) || ! wp_verify_nonce($_POST['generate_site_user_report_nonce'], 'generate_site_user_report_action') ) {
-            wp_die('Security check failed.');
-        }
+		$user_filters = [];
 
-        $users = [];
-        $file_name = "user-report-" . time() . ".csv";
+		if (!empty($_POST["user_report_email_domain"])) {
+			$email_domain = $_POST["user_report_email_domain"];
+			$user_filters = [
+				"search" => "*@" . $email_domain,
+				"search_columns" => ["user_email"],
+			];
+		}
 
-        $user_filters = [];
+		$users = get_users($user_filters);
 
-        if(! empty($_POST['user_report_email_domain'])) {
-            $email_domain = $_POST['user_report_email_domain'];
-            $user_filters = [
-                'search'         => '*@' . $email_domain,
-                'search_columns' => ['user_email'],
-            ];
-        }
+		if (is_array($users) && count($users) > 0) {
+			header("Content-Type: text/csv");
+			header('Content-Disposition: attachment; filename="' . $file_name . '"');
+			header("Pragma: no-cache");
+			header("Expires: 0");
 
-        $users = get_users($user_filters);
+			// Open output stream
+			$output = fopen("php://output", "w");
 
-        if(is_array($users) && count($users) > 0){
+			// Add header row
+			fputcsv($output, ["Username", "Email", "Last Login Date"]);
 
-            header('Content-Type: text/csv');
-            header('Content-Disposition: attachment; filename="' . $file_name . '"');
-            header('Pragma: no-cache');
-            header('Expires: 0');
+			foreach ($users as $user) {
+				$last_logged_in_date = "";
 
-            // Open output stream
-            $output = fopen('php://output', 'w');
+				$login_date = get_user_meta($user->ID, "_moj_comp_user_login", true);
 
-            // Add header row
-            fputcsv($output, ['Username', 'Email', 'Last Login Date']);
+				if (!empty($login_date)) {
+					$last_logged_in_date = date("Y-m-d", $login_date);
+				}
 
-            foreach ( $users as $user ) {
+				fputcsv($output, [$user->user_login, $user->user_email, $last_logged_in_date]);
+			}
 
-                $last_logged_in_date = '';
-
-                $login_date = get_user_meta($user->ID, '_moj_comp_user_login', true);
-
-                if(!empty($login_date)){
-                    $last_logged_in_date = date('Y-m-d', $login_date);
-                }
-
-                fputcsv($output, [$user->user_login, $user->user_email, $last_logged_in_date]);
-            }
-
-            fclose($output);
-            exit;
-        }
-
-    }
+			fclose($output);
+			exit();
+		}
+	}
 }

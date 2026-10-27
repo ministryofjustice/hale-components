@@ -1,49 +1,49 @@
 {
-    "name": "hale-components",
-    "version": "1.0.0",
-    "engines": {
-        "node": "*",
-        "npm": "*"
-    },
-    "description": "WP plugin hale-components",
-    "main": "index.js",
-    "scripts": {
-        "dev": "cross-env NODE_ENV=development webpack --progress --config=node_modules/laravel-mix/setup/webpack.config.js",
-        "watch": "cross-env NODE_ENV=development webpack --watch --progress --config=node_modules/laravel-mix/setup/webpack.config.js",
-        "hot": "cross-env NODE_ENV=development webpack-dev-server --inline --hot --config=node_modules/laravel-mix/setup/webpack.config.js",
-        "format": "npx prettier --write \"**/*.{js,ts,jsx,tsx,html,css,scss,json,php}\"",
-        "check": "npx prettier --check .",
-        "production": "cross-env NODE_ENV=production webpack --progress --config=node_modules/laravel-mix/setup/webpack.config.js",
-        "build": "npm run production",
-        "release": "npm run production && npm run format"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/ministryofjustice/hale-components.git"
-    },
-    "contributors": [
-        "Ministry of Justice"
-    ],
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/ministryofjustice/hale-components/issues"
-    },
-    "homepage": "https://github.com/ministryofjustice/hale-components/#readme",
-    "author": "MoJ",
-    "devDependencies": {
-        "@prettier/plugin-php": "^0.24.0",
-        "cross-env": "*",
-        "laravel-mix": "*",
-        "postcss": "^8.3.5",
-        "resolve-url-loader": "*",
-        "sass": "*",
-        "sass-loader": "*",
-        "webpack": "5.105.0"
-    },
-    "dependencies": {
-        "govuk-frontend": "^4.6.0"
-    },
-    "overrides": {
-        "webpack": "5.105.0"
-    }
+	"name": "hale-components",
+	"version": "1.0.0",
+	"engines": {
+		"node": "*",
+		"npm": "*"
+	},
+	"description": "WP plugin hale-components",
+	"main": "index.js",
+	"scripts": {
+		"dev": "cross-env NODE_ENV=development webpack --progress --config=node_modules/laravel-mix/setup/webpack.config.js",
+		"watch": "cross-env NODE_ENV=development webpack --watch --progress --config=node_modules/laravel-mix/setup/webpack.config.js",
+		"hot": "cross-env NODE_ENV=development webpack-dev-server --inline --hot --config=node_modules/laravel-mix/setup/webpack.config.js",
+		"format": "npx prettier --write \"**/*.{js,ts,jsx,tsx,html,css,scss,json,php}\"",
+		"check": "npx prettier --check .",
+		"production": "cross-env NODE_ENV=production webpack --progress --config=node_modules/laravel-mix/setup/webpack.config.js",
+		"build": "npm run production",
+		"release": "npm run production && npm run format"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ministryofjustice/hale-components.git"
+	},
+	"contributors": [
+		"Ministry of Justice"
+	],
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/ministryofjustice/hale-components/issues"
+	},
+	"homepage": "https://github.com/ministryofjustice/hale-components/#readme",
+	"author": "MoJ",
+	"devDependencies": {
+		"@prettier/plugin-php": "^0.24.0",
+		"cross-env": "*",
+		"laravel-mix": "*",
+		"postcss": "^8.3.5",
+		"resolve-url-loader": "*",
+		"sass": "*",
+		"sass-loader": "*",
+		"webpack": "5.105.0"
+	},
+	"dependencies": {
+		"govuk-frontend": "^4.6.0"
+	},
+	"overrides": {
+		"webpack": "5.105.0"
+	}
 }

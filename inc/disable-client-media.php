@@ -1,6 +1,6 @@
 <?php
 
-defined('ABSPATH') || exit;
+defined("ABSPATH") || exit();
 
 /**
  * Disables client-side media processing (WordPress 7.1).
@@ -11,4 +11,4 @@ defined('ABSPATH') || exit;
  * would also be made in the browser, skipping EWWW and the S3 Uploads image
  * editor.
  */
-add_filter('wp_client_side_media_processing_enabled', '__return_false');
+add_filter("wp_client_side_media_processing_enabled", "__return_false");

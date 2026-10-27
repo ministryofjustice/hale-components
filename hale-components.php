@@ -14,35 +14,33 @@ License: MIT
 */
 
 // Include additional functionality/tools not in tabs
-include 'inc/search-replace-database.php'; 
-include 'inc/site-path-track.php'; 
-include 'inc/login-settings.php';
-include 'inc/site-user-reports.php'; 
-include 'inc/blocks.php';
-include 'inc/block-usage-report.php';
-include 'inc/comments.php';
-include 'inc/cloudfront.php';
-include 'inc/disable-ai.php';
-include 'inc/disable-abilities.php';
-include 'inc/disable-client-media.php';
-include 'inc/disable-custom-css.php';
-include 'inc/disable-user-api.php';
-include 'inc/auth0-db-version.php';
-include 'inc/pagecache-purge.php';
-include 'inc/pagecache-controller.php';
-include 'inc/relevanssi.php';
-include 'inc/sentry-browser-sdk.php';
-include 'inc/image-handling.php';
-
+include "inc/search-replace-database.php";
+include "inc/site-path-track.php";
+include "inc/login-settings.php";
+include "inc/site-user-reports.php";
+include "inc/blocks.php";
+include "inc/block-usage-report.php";
+include "inc/comments.php";
+include "inc/cloudfront.php";
+include "inc/disable-ai.php";
+include "inc/disable-abilities.php";
+include "inc/disable-client-media.php";
+include "inc/disable-custom-css.php";
+include "inc/disable-user-api.php";
+include "inc/auth0-db-version.php";
+include "inc/pagecache-purge.php";
+include "inc/pagecache-controller.php";
+include "inc/relevanssi.php";
+include "inc/sentry-browser-sdk.php";
+include "inc/image-handling.php";
 
 // Only include the network dashboard if this is a multisite setup
 if (is_multisite()) {
-    include 'inc/lua-firewall-controller.php';
-    include 'inc/network-dashboard.php';
-	include 'inc/register-rest-api-routes.php';
-    include 'inc/clean-up-users.php'; 
-    include 'inc/network-user-reports.php'; 
+	include "inc/lua-firewall-controller.php";
+	include "inc/network-dashboard.php";
+	include "inc/register-rest-api-routes.php";
+	include "inc/clean-up-users.php";
+	include "inc/network-user-reports.php";
 }
 
-include 'moj-components/moj-components.php'; 
-
+include "moj-components/moj-components.php";

@@ -1,14 +1,14 @@
 <?php
 
 // Exit if accessed directly.
-if (! defined('ABSPATH')) {
-    exit;
+if (!defined("ABSPATH")) {
+	exit();
 }
 
 // Stop the Auth0 plugin (4.x) writing to the options table on every request.
 // V5 and V6 don't use the auth0_db_version option, so this filter is inert there,
 // but it should be removed when upgrading from V4.
-add_filter('pre_update_option_auth0_db_version', 'hc_auth0_db_version_noop', 10, 2);
+add_filter("pre_update_option_auth0_db_version", "hc_auth0_db_version_noop", 10, 2);
 
 /**
  * Auth0 4.x runs WP_Auth0_DBManager::install_db() on plugins_loaded, which calls
@@ -25,5 +25,5 @@ add_filter('pre_update_option_auth0_db_version', 'hc_auth0_db_version_noop', 10,
  */
 function hc_auth0_db_version_noop($value, $old_value)
 {
-    return (string) $value === (string) $old_value ? $old_value : $value;
+	return (string) $value === (string) $old_value ? $old_value : $value;
 }
