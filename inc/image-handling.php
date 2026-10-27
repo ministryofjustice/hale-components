@@ -1,6 +1,6 @@
 <?php
 
-if (! defined('ABSPATH')) exit;
+defined('ABSPATH') || exit;
 
 /**
  * Add support for Apple and other new formats
