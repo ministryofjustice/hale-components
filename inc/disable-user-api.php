@@ -10,18 +10,20 @@ add_filter('rest_endpoints', 'hale_disable_public_user_api_endpoints');
 
 /**
  * Disables the core /wp/v2/users REST API endpoints for public (unauthenticated)
- * requests, while leaving them available to logged-in users who can list users.
+ * requests, while leaving them available to logged-in users who can edit posts.
  *
  * This stops anonymous user enumeration via /wp-json/wp/v2/users without breaking
- * the block editor author selector, which relies on the endpoint for editors/admins.
+ * the block editor, which reads the endpoint for the author of the post it is
+ * editing. That needs edit_posts (contributors and up), not list_users, which
+ * only administrators have.
  *
  * @param array $endpoints The registered REST API endpoints.
  * @return array The filtered endpoints.
  */
 function hale_disable_public_user_api_endpoints($endpoints)
 {
-    // Allow users who are logged in and permitted to list users (e.g. editors, admins).
-    if (is_user_logged_in() && current_user_can('list_users')) {
+    // Allow logged-in users who can edit posts (e.g. contributors, authors, editors, admins).
+    if (is_user_logged_in() && current_user_can('edit_posts')) {
         return $endpoints;
     }
 
