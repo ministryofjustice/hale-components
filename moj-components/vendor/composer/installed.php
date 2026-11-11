@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'ministryofjustice/wp-moj-components',
-        'pretty_version' => 'dev-main',
-        'version' => 'dev-main',
-        'reference' => '73e3c2904577f5ebfc13108058c7bb051c66e77f',
+        'pretty_version' => '1.0.0+no-version-set',
+        'version' => '1.0.0.0',
+        'reference' => null,
         'type' => 'wordpress-muplugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         'composer/ca-bundle' => array(
-            'pretty_version' => '1.5.7',
-            'version' => '1.5.7.0',
-            'reference' => 'd665d22c417056996c59019579f1967dfe5c1e82',
+            'pretty_version' => '1.6.0',
+            'version' => '1.6.0.0',
+            'reference' => '2c99cf2e92516985dea4914812b93d9daf01cdd6',
             'type' => 'library',
             'install_path' => __DIR__ . '/./ca-bundle',
             'aliases' => array(),
@@ -110,9 +110,9 @@
             'dev_requirement' => true,
         ),
         'ministryofjustice/wp-moj-components' => array(
-            'pretty_version' => 'dev-main',
-            'version' => 'dev-main',
-            'reference' => '73e3c2904577f5ebfc13108058c7bb051c66e77f',
+            'pretty_version' => '1.0.0+no-version-set',
+            'version' => '1.0.0.0',
+            'reference' => null,
             'type' => 'wordpress-muplugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
